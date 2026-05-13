@@ -1,0 +1,49 @@
+channel_id: latest-tech-explained
+display_name: Latest Tech Explained
+
+audience:
+  description: Curious non-engineers who want to understand what just shipped
+  assumed_knowledge_level: medium
+
+tone:
+  voice: casual
+  notes: Conversational and energetic. Concrete examples over jargon. What does this actually mean for a normal person?
+
+length_target_seconds: [120, 300]
+
+research:
+  min_sources: 3
+  recency_window_days: 7
+  require_primary_sources: true
+  source_balance:
+    - vendor announcement or official documentation
+    - independent reporting
+    - hands-on review or technical deep-dive
+  blocked_sources: []
+
+bias_rules:
+  - Distinguish announced features from shipping features.
+  - Flag marketing claims as such; do not repeat them as fact.
+  - Include independent assessments alongside vendor claims.
+
+jargon:
+  explain_threshold: any technical term outside common consumer usage
+  include_history: false
+
+visual_style:
+  template: kinetic-explainer
+  palette: ['#0F0F0F', '#00E5FF', '#FFFFFF']
+  font: JetBrains Mono
+  motion_intensity: snappy
+  broll_policy: generated_allowed
+
+publish:
+  auto_upload: false
+  shorts_variant: true
+  description_template: |
+    {summary}
+
+    Sources:
+    {source_list}
+
+    AI-generated narration and animation. Editorially reviewed.

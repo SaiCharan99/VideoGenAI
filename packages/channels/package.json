@@ -1,0 +1,21 @@
+{
+  "name": "@videogenai/channels",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "validate": "node --import tsx/esm src/validate.ts"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "tsx": "^4.19.2"
+  }
+}
