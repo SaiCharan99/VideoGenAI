@@ -52,7 +52,7 @@ pnpm db:migrate     # drizzle migrate
 
 ### Code style
 
-- Default to **no comments**. Add one only when the *why* is non-obvious (a hidden constraint, a workaround, a surprising behavior). Never comment *what* — the code should already say that.
+- Default to **no comments**. Add one only when the _why_ is non-obvious (a hidden constraint, a workaround, a surprising behavior). Never comment _what_ — the code should already say that.
 - Small, focused modules. A file over ~200 lines is a signal to split.
 - No premature abstractions. Three similar lines beat a clever generic. Wait for the third real use case before extracting.
 
