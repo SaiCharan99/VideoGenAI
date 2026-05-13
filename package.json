@@ -1,0 +1,36 @@
+{
+  "name": "videogenai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end pipeline: one-line description → researched, scripted, animated, voiced YouTube video, with human-approval cockpit.",
+  "license": "MIT",
+  "author": "Sai Charan",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SaiCharan99/VideoGenAI.git"
+  },
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "dev": "pnpm -r --parallel --if-present dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "clean": "pnpm -r --if-present clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  }
+}

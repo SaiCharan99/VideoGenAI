@@ -31,12 +31,12 @@ research:
   min_sources: <int>
   recency_window_days: <int>
   require_primary_sources: <bool>
-  source_balance:                 # required for any politically-charged channel
+  source_balance: # required for any politically-charged channel
     - <source name or category>
     - ...
-  blocked_sources: []             # optional deny-list
+  blocked_sources: [] # optional deny-list
 
-bias_rules:                       # plain-language rules the fact-checker enforces
+bias_rules: # plain-language rules the fact-checker enforces
   - <rule>
   - ...
 
@@ -46,13 +46,13 @@ jargon:
 
 visual_style:
   template: kinetic-explainer | <future templates>
-  palette: ["#hex", ...]
+  palette: ['#hex', ...]
   font: <font family>
   motion_intensity: subtle | balanced | snappy
   broll_policy: stock_preferred | mixed | generated_allowed
 
 publish:
-  auto_upload: <bool>             # human approval still required until trust earned
+  auto_upload: <bool> # human approval still required until trust earned
   shorts_variant: <bool>
   description_template: <string>
 ```
@@ -98,7 +98,7 @@ jargon:
 
 visual_style:
   template: kinetic-explainer
-  palette: ["#0B2545", "#FFD700", "#F4F4F4"]
+  palette: ['#0B2545', '#FFD700', '#F4F4F4']
   font: Inter
   motion_intensity: balanced
   broll_policy: mixed
@@ -135,7 +135,7 @@ research:
   min_sources: 3
   recency_window_days: 7
   require_primary_sources: true
-  source_balance:                 # tech doesn't need political balance, but does need primary
+  source_balance: # tech doesn't need political balance, but does need primary
     - vendor announcement / official docs
     - independent reporting
     - hands-on review or technical deep-dive
@@ -150,7 +150,7 @@ jargon:
 
 visual_style:
   template: kinetic-explainer
-  palette: ["#0F0F0F", "#00E5FF", "#FFFFFF"]
+  palette: ['#0F0F0F', '#00E5FF', '#FFFFFF']
   font: JetBrains Mono
   motion_intensity: snappy
   broll_policy: generated_allowed
@@ -171,4 +171,4 @@ publish:
 
 - **Don't** add `if (channel.id === '...') ...` in stage code. Add a schema field instead and check that.
 - **Don't** rely on the channel id as anything other than an identifier. The behavior must come from explicit fields.
-- **Don't** put prompts in the channel config. Prompts belong with their agents; channel configs feed *parameters* into prompts.
+- **Don't** put prompts in the channel config. Prompts belong with their agents; channel configs feed _parameters_ into prompts.
