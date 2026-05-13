@@ -1,20 +1,6 @@
+import { db, runs } from '@videogenai/db';
+import { desc } from 'drizzle-orm';
 import Link from 'next/link';
-
-interface Run {
-  id: string;
-  channelId: string;
-  inputText: string;
-  status: string;
-  createdAt: string;
-}
-
-async function getRuns(): Promise<Run[]> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'}/api/runs`, {
-    cache: 'no-store',
-  });
-  if (!res.ok) return [];
-  return (await res.json()) as Run[];
-}
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'text-[var(--muted)]',
@@ -23,8 +9,13 @@ const STATUS_COLORS: Record<string, string> = {
   failed: 'text-[var(--red)]',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function RunsPage() {
-  const runs = await getRuns();
+  const allRuns = await db.query.runs.findMany({
+    orderBy: [desc(runs.createdAt)],
+    limit: 50,
+  });
 
   return (
     <div>
@@ -38,11 +29,11 @@ export default async function RunsPage() {
         </Link>
       </div>
 
-      {runs.length === 0 ? (
+      {allRuns.length === 0 ? (
         <p className="text-[var(--muted)] text-sm">No runs yet. Create one to get started.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {runs.map((run) => (
+          {allRuns.map((run) => (
             <Link
               key={run.id}
               href={`/runs/${run.id}`}

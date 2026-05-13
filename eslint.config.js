@@ -12,6 +12,8 @@ export default tseslint.config(
       '**/coverage/**',
       '**/*.tsbuildinfo',
       'runs/**',
+      '**/next-env.d.ts',
+      '**/postcss.config.cjs',
     ],
   },
   js.configs.recommended,
