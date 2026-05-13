@@ -16,7 +16,9 @@ out/
 !.env.example
 
 # Runs / generated artifacts
-runs/
+/runs/
+packages/pipeline/runs/
+apps/web/public/runs/
 *.mp4
 *.mp3
 *.wav
