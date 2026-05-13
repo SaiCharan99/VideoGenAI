@@ -48,16 +48,16 @@ export async function runScriptwriter(
     throw new Error(`Scriptwriter: invalid output — ${parsed.error.toString()}`);
   }
 
-  // Enforce: every line that isn't a jargon/transition must cite a source
+  // Enforce: any cited source_id must exist in the fact pack (empty arrays allowed for transitions)
   const validSourceIds = new Set(factPack.sources.map((s) => s.id));
-  const unsourced = parsed.data.lines.filter(
-    (line) => line.source_ids.length === 0 || line.source_ids.some((id) => !validSourceIds.has(id)),
+  const badLines = parsed.data.lines.filter((line) =>
+    line.source_ids.some((id) => !validSourceIds.has(id)),
   );
 
-  if (unsourced.length > 0) {
+  if (badLines.length > 0) {
     throw new Error(
-      `Scriptwriter: ${unsourced.length} lines have missing or invalid source_ids. ` +
-        `First offender: scene ${unsourced[0]?.scene}: "${unsourced[0]?.text?.slice(0, 80)}..."`,
+      `Scriptwriter: ${badLines.length} lines cite source IDs not in the fact pack. ` +
+        `First offender: scene ${badLines[0]?.scene}: "${badLines[0]?.text?.slice(0, 80)}..."`,
     );
   }
 

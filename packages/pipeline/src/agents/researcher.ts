@@ -22,9 +22,15 @@ export async function runResearcher(
   const queries = buildQueries(brief, channel);
   logger.info('searching', { queries });
 
-  const allResults = (
-    await Promise.all(queries.map((q) => braveSearch(q, 5).catch(() => [])))
-  ).flat();
+  const searchResults = await Promise.allSettled(queries.map((q) => braveSearch(q, 5)));
+  const allResults = searchResults.flatMap((r) => {
+    if (r.status === 'fulfilled') return r.value;
+    logger.warn('search query failed', { reason: String(r.reason) });
+    return [];
+  });
+  if (allResults.length === 0) {
+    throw new Error('Researcher: all search queries failed — cannot proceed without sources');
+  }
 
   // Deduplicate by URL
   const seen = new Set<string>();
@@ -84,6 +90,17 @@ export async function runResearcher(
     );
   }
 
+  // Verify source provenance: every source ID cited in facts must exist in the returned sources
+  const returnedSourceIds = new Set(parsed.data.sources.map((s) => s.id));
+  const phantomIds = parsed.data.facts
+    .flatMap((f) => f.source_ids)
+    .filter((id) => !returnedSourceIds.has(id));
+  if (phantomIds.length > 0) {
+    throw new Error(
+      `Researcher: facts reference source IDs not in the returned source list: ${[...new Set(phantomIds)].join(', ')}`,
+    );
+  }
+
   await markStageAwaitingApproval(runId, 'research', parsed.data);
   logger.info('complete', {
     sources: parsed.data.sources.length,
@@ -94,9 +111,10 @@ export async function runResearcher(
 }
 
 function buildQueries(brief: Brief, channel: ChannelConfig): string[] {
+  const year = new Date().getFullYear();
   const recencyNote =
     channel.research.recency_window_days <= 7
-      ? ' 2026'
+      ? ` ${year}`
       : ` last ${channel.research.recency_window_days} days`;
   const base = brief.must_cover.slice(0, 3).map((point) => `${point}${recencyNote}`);
   // One broad query for the angle itself

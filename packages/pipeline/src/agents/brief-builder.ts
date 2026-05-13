@@ -15,7 +15,7 @@ export async function runBriefBuilder(
 ): Promise<Brief> {
   const logger = createLogger(runId, 'brief');
   await markStageRunning(runId, 'brief');
-  logger.info('starting', { inputText });
+  logger.info('starting', { chars: inputText.length });
 
   const response = await client.messages.create({
     model: 'claude-opus-4-7',

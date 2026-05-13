@@ -40,11 +40,12 @@ export const pipelineRun = inngest.createFunction(
       }
     });
 
-    await step.waitForEvent('brief/approved', {
+    const briefApproval = await step.waitForEvent('brief/approved', {
       event: 'videogenai/stage.approved',
       if: `event.data.runId == async.data.runId && async.data.stageId == 'brief'`,
       timeout: '7d',
     });
+    if (!briefApproval) throw new Error('brief stage approval timed out after 7 days');
 
     // ── Stage 2: Research ───────────────────────────────────────────────────
     const factPack = await step.run('stage/research', async () => {
@@ -56,11 +57,12 @@ export const pipelineRun = inngest.createFunction(
       }
     });
 
-    await step.waitForEvent('research/approved', {
+    const researchApproval = await step.waitForEvent('research/approved', {
       event: 'videogenai/stage.approved',
       if: `event.data.runId == async.data.runId && async.data.stageId == 'research'`,
       timeout: '7d',
     });
+    if (!researchApproval) throw new Error('research stage approval timed out after 7 days');
 
     // ── Stage 4: Script ─────────────────────────────────────────────────────
     const script = await step.run('stage/script', async () => {
@@ -72,11 +74,12 @@ export const pipelineRun = inngest.createFunction(
       }
     });
 
-    await step.waitForEvent('script/approved', {
+    const scriptApproval = await step.waitForEvent('script/approved', {
       event: 'videogenai/stage.approved',
       if: `event.data.runId == async.data.runId && async.data.stageId == 'script'`,
       timeout: '7d',
     });
+    if (!scriptApproval) throw new Error('script stage approval timed out after 7 days');
 
     await db
       .update(runs)
