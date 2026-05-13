@@ -1,20 +1,18 @@
 import { EventSchemas, Inngest } from 'inngest';
 
-interface Events {
-  'videogenai/run.start': {
-    data: { runId: string; channelId: string; inputText: string };
-  };
-  'videogenai/stage.approved': {
-    data: { runId: string; stageId: string };
-  };
+export interface PipelineStartEvent {
+  name: 'videogenai/run.start';
+  data: { runId: string; channelId: string; inputText: string };
 }
+
+export interface StageApprovedEvent {
+  name: 'videogenai/stage.approved';
+  data: { runId: string; stageId: string };
+}
+
+type VideoGenAIEvents = PipelineStartEvent | StageApprovedEvent;
 
 export const inngest = new Inngest({
   id: 'videogenai',
-  schemas: new EventSchemas().fromRecord<Events>(),
+  schemas: new EventSchemas().fromUnion<VideoGenAIEvents>(),
 });
-
-export type PipelineStartEvent = { name: 'videogenai/run.start' } & Events['videogenai/run.start'];
-export type StageApprovedEvent = {
-  name: 'videogenai/stage.approved';
-} & Events['videogenai/stage.approved'];
