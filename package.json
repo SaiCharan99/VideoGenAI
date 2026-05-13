@@ -24,7 +24,12 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
     "clean": "pnpm -r --if-present clean && rm -rf node_modules",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:generate": "pnpm --filter @videogenai/db db:generate",
+    "db:migrate": "pnpm --filter @videogenai/db db:migrate",
+    "db:studio": "pnpm --filter @videogenai/db db:studio",
+    "db:push": "pnpm --filter @videogenai/db db:push",
+    "channels:validate": "pnpm --filter @videogenai/channels validate"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [

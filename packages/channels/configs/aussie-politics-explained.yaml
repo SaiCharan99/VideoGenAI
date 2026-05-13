@@ -1,0 +1,56 @@
+channel_id: aussie-politics-explained
+display_name: Aussie Politics Explained for Dummies
+
+audience:
+  description: Australians age 18-35 new to politics
+  assumed_knowledge_level: low
+
+tone:
+  voice: explainer
+  notes: |
+    Casual, no condescension. Acknowledge that politics is confusing.
+    Never editorialize. Attribute every claim. Present contested issues
+    by naming all major positions and their sources.
+
+length_target_seconds: [180, 420]
+
+research:
+  min_sources: 4
+  recency_window_days: 14
+  require_primary_sources: true
+  source_balance:
+    - ABC News
+    - Sydney Morning Herald
+    - The Australian
+    - The Guardian Australia
+    - parliamentary Hansard / government primary sources
+  blocked_sources: []
+
+bias_rules:
+  - Present claims with attribution; never state a contested claim as fact.
+  - If a claim is contested, show all major positions with their sources.
+  - Avoid loaded terms ("slammed", "destroyed", "exposed"); use neutral verbs.
+  - Provide historical context when a term or institution is first named.
+  - Never describe a policy as "good" or "bad"; describe what it does and who says what about it.
+
+jargon:
+  explain_threshold: anything a Year 12 student would not know
+  include_history: true
+
+visual_style:
+  template: kinetic-explainer
+  palette: ['#0B2545', '#FFD700', '#F4F4F4']
+  font: Inter
+  motion_intensity: balanced
+  broll_policy: mixed
+
+publish:
+  auto_upload: false
+  shorts_variant: true
+  description_template: |
+    {summary}
+
+    Sources:
+    {source_list}
+
+    This video uses AI-generated narration and animation. Editorial decisions and source curation are human-reviewed.
