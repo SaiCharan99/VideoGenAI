@@ -1,8 +1,18 @@
 'use client';
 
+import Link from 'next/link';
 import { StageCard } from '@/components/StageCard';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { CHANNEL_MAP, fmtRange } from '@/lib/channels';
+import { ALL_STAGES, fmtDuration, relTime } from '@/lib/stages';
+import {
+  IcTerminal, IcBrackets, IcCopy, IcAlert, IcArrowR, IcClock,
+} from '@/components/ui/Icons';
+
+function cls(...args: (string | boolean | undefined | null)[]) {
+  return args.filter(Boolean).join(' ');
+}
 
 interface Stage {
   id: string;
@@ -30,83 +40,318 @@ interface RunDetail {
   stages: Stage[];
 }
 
-const RUN_STATUS_COLORS: Record<string, string> = {
-  pending: 'text-[var(--muted)]',
-  running: 'text-[var(--accent)]',
-  complete: 'text-[var(--green)]',
-  failed: 'text-[var(--red)]',
-};
+function stageNodeCls(status: string): string {
+  if (status === 'approved' || status === 'complete') return 'done';
+  if (status === 'running') return 'running';
+  if (status === 'awaiting_approval') return 'approval';
+  if (status === 'failed') return 'failed';
+  if (status === 'skipped') return 'skipped';
+  return 'pending';
+}
 
-const POLL_INTERVAL_MS = 4000;
+function stageNodeStatusLabel(status: string): string {
+  if (status === 'awaiting_approval') return 'approval';
+  if (status === 'approved') return 'approved';
+  return status;
+}
+
+function pillClass(status: string): string {
+  if (status === 'running') return 'pill pill--running';
+  if (status === 'awaiting_approval') return 'pill pill--approval';
+  if (status === 'approved' || status === 'complete') return 'pill pill--ok';
+  if (status === 'failed') return 'pill pill--bad';
+  return 'pill pill--pending';
+}
+
+function pillLabel(status: string): string {
+  if (status === 'awaiting_approval') return 'approval';
+  return status;
+}
+
+function ChDot({ channelId }: { channelId: string }) {
+  const ch = CHANNEL_MAP[channelId];
+  if (!ch) return null;
+  return (
+    <div
+      style={{
+        display: 'inline-block', width: 12, height: 12, borderRadius: 3, flexShrink: 0,
+        background: `linear-gradient(135deg, ${ch.palette[0]} 0% 50%, ${ch.palette[1]} 50% 100%)`,
+        boxShadow: '0 0 0 1px var(--br-2) inset',
+      }}
+    />
+  );
+}
 
 export default function RunDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [data, setData] = useState<RunDetail | null>(null);
-  const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/runs/${id}`);
-      if (!res.ok) {
-        setError('Run not found');
-        return;
+      if (!res.ok) { setLoadError('Run not found'); return; }
+      const next = (await res.json()) as RunDetail;
+      setData(next);
+      if (selectedStageId === null) {
+        const awaiting = next.stages.find((s) => s.status === 'awaiting_approval');
+        const running = next.stages.find((s) => s.status === 'running');
+        const lastApproved = [...next.stages].reverse().find((s) => s.status === 'approved');
+        const auto = awaiting ?? running ?? lastApproved ?? next.stages[0];
+        if (auto) setSelectedStageId(auto.stageId);
       }
-      setData((await res.json()) as RunDetail);
     } catch {
-      setError('Failed to load run');
+      setLoadError('Failed to load run');
     }
-  }, [id]);
+  }, [id, selectedStageId]);
 
   useEffect(() => {
     void fetchData();
-    const timer = setInterval(() => void fetchData(), POLL_INTERVAL_MS);
-    return () => clearInterval(timer);
+    const t = setInterval(() => void fetchData(), 4000);
+    return () => clearInterval(t);
   }, [fetchData]);
 
-  if (error) {
-    return <p className="text-[var(--red)] text-sm">{error}</p>;
+  if (loadError) {
+    return <p style={{ color: 'var(--ac-bad)', padding: 24, fontFamily: 'var(--f-mono)', fontSize: 12 }}>{loadError}</p>;
   }
 
   if (!data) {
-    return <p className="text-[var(--muted)] text-sm">Loading…</p>;
+    return (
+      <div className="page">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className="skel" style={{ height: 56, borderRadius: 6 }} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const { run, stages } = data;
-  const statusColor = RUN_STATUS_COLORS[run.status] ?? 'text-[var(--muted)]';
-  const isActive = run.status === 'running' || run.status === 'pending';
+  const ch = CHANNEL_MAP[run.channelId];
+
+  const dbByStageId = Object.fromEntries(stages.map((s) => [s.stageId, s]));
+
+  const isAwaiting = stages.some((s) => s.status === 'awaiting_approval');
+  const awaitingStage = stages.find((s) => s.status === 'awaiting_approval');
+  const approvedCount = stages.filter((s) => s.status === 'approved' || s.status === 'complete').length;
+
+  const runDisplayStatus = isAwaiting ? 'awaiting_approval' : run.status;
+
+  const sourcesCount = (() => {
+    const r = stages.find((s) => s.stageId === 'research');
+    if (!r?.output || typeof r.output !== 'object') return 0;
+    const o = r.output as Record<string, unknown>;
+    return Array.isArray(o.sources) ? (o.sources as unknown[]).length : 0;
+  })();
+
+  const factsCount = (() => {
+    const r = stages.find((s) => s.stageId === 'research');
+    if (!r?.output || typeof r.output !== 'object') return 0;
+    const o = r.output as Record<string, unknown>;
+    return Array.isArray(o.facts) ? (o.facts as unknown[]).length : 0;
+  })();
+
+  const scriptDur = (() => {
+    const s = stages.find((st) => st.stageId === 'script');
+    if (!s?.output || typeof s.output !== 'object') return null;
+    const o = s.output as Record<string, unknown>;
+    return typeof o.estimated_duration_seconds === 'number' ? o.estimated_duration_seconds : null;
+  })();
+
+  const pendingCount = ALL_STAGES.filter((m) => !dbByStageId[m.id]).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold truncate">{run.inputText}</h1>
-          {isActive && (
-            <span className="text-xs text-[var(--muted)] animate-pulse shrink-0">auto-refresh</span>
-          )}
+    <div className="page page--wide detail">
+      {/* Head */}
+      <div className="detail__head">
+        <div className="detail__topbar">
+          <Link href="/runs">← Runs</Link>
+          <span style={{ color: 'var(--tx-4)' }}>/</span>
+          <span style={{ fontFamily: 'var(--f-mono)' }}>{run.id}</span>
+          <span className="refresh" style={{ marginLeft: 'auto' }}>
+            <span className="dot" /> auto-refresh · 4s
+          </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-[var(--muted)]">
-          <span className="font-mono">{run.channelId}</span>
-          <span>·</span>
-          <span className={`font-mono uppercase ${statusColor}`}>{run.status}</span>
-          <span>·</span>
-          <span>{new Date(run.createdAt).toLocaleString()}</span>
+        <div className="detail__title-row">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="detail__title">{run.inputText}</div>
+            <div className="detail__meta" style={{ marginTop: 8 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <ChDot channelId={run.channelId} />
+                <b>{ch?.name ?? run.channelId}</b>
+              </span>
+              <span className="sep">·</span>
+              <span className={pillClass(runDisplayStatus)}>
+                <span className="dot" />
+                {pillLabel(runDisplayStatus)}
+              </span>
+              <span className="sep">·</span>
+              <span>Created <b>{relTime(run.createdAt)}</b></span>
+              <span className="sep">·</span>
+              <span><b>{approvedCount}</b> of <b>10</b> stages approved</span>
+            </div>
+          </div>
+          <div className="detail__actions">
+            <button className="btn btn--ghost btn--sm"><IcTerminal size={12} /> Open logs</button>
+            <button className="btn btn--ghost btn--sm"><IcBrackets size={12} /> View JSON</button>
+            <button className="btn btn--ghost btn--sm"><IcCopy size={12} /> Share</button>
+          </div>
         </div>
       </div>
 
-      {stages.length === 0 ? (
-        <p className="text-[var(--muted)] text-sm">Pipeline initialising…</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {stages.map((stage) => (
-            <StageCard
-              key={stage.id}
-              runId={run.id}
-              stage={stage}
-              onApproved={() => void fetchData()}
-            />
-          ))}
+      {/* Pipeline timeline */}
+      <div className="pipeline">
+        {ALL_STAGES.map((meta, i) => {
+          const db = dbByStageId[meta.id];
+          const status = db?.status ?? 'pending';
+          const nodeCls = stageNodeCls(status);
+          return (
+            <div
+              key={meta.id}
+              className={cls('stage-node', nodeCls, selectedStageId === meta.id && 'selected')}
+              onClick={() => setSelectedStageId(meta.id)}
+            >
+              <div className="stage-node__top">
+                <span className="stage-node__idx">{String(i + 1).padStart(2, '0')}</span>
+                <span className="stage-node__name">{meta.label}</span>
+              </div>
+              <span className="stage-node__status">{stageNodeStatusLabel(status)}</span>
+              <div className="stage-node__bar" />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Detail grid */}
+      <div className="detail__grid">
+        {/* Main column */}
+        <div className="detail__main">
+          {stages.length === 0 && (
+            <div className="empty">
+              <h3>Run is queued.</h3>
+              <p>The brief stage will start in a moment.</p>
+            </div>
+          )}
+
+          {stages.map((stage, i) => {
+            const metaIdx = ALL_STAGES.findIndex((m) => m.id === stage.stageId);
+            return (
+              <StageCard
+                key={stage.id}
+                runId={run.id}
+                stage={stage}
+                index={metaIdx === -1 ? i : metaIdx}
+                defaultOpen={stage.stageId === selectedStageId}
+                onApproved={() => void fetchData()}
+              />
+            );
+          })}
+
+          {pendingCount > 0 && (
+            <div style={{
+              padding: '14px 16px',
+              border: '1px dashed var(--br-2)',
+              borderRadius: 'var(--r-3)',
+              color: 'var(--tx-3)',
+              fontFamily: 'var(--f-mono)',
+              fontSize: 11,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <IcClock size={12} />
+              <span>{pendingCount} stage{pendingCount !== 1 ? 's' : ''} pending — will start automatically after each approval.</span>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right sidebar */}
+        <aside className="detail__side">
+          <div className="swid">
+            <div className="swid__head">Run metadata</div>
+            <div className="swid__body">
+              <div className="swid__row">
+                <span className="k">Run ID</span>
+                <span className="v" style={{ fontSize: 10 }}>{run.id}</span>
+              </div>
+              <div className="swid__row">
+                <span className="k">Channel</span>
+                <span className="v">{run.channelId}</span>
+              </div>
+              <div className="swid__row">
+                <span className="k">Created</span>
+                <span className="v">{relTime(run.createdAt)}</span>
+              </div>
+              <div className="swid__row">
+                <span className="k">Approved</span>
+                <span className="v">{approvedCount} / 10</span>
+              </div>
+              {sourcesCount > 0 && (
+                <div className="swid__row">
+                  <span className="k">Sources</span>
+                  <span className="v">{sourcesCount}</span>
+                </div>
+              )}
+              {factsCount > 0 && (
+                <div className="swid__row">
+                  <span className="k">Facts</span>
+                  <span className="v">{factsCount}</span>
+                </div>
+              )}
+              {scriptDur !== null && (
+                <div className="swid__row">
+                  <span className="k">Script ≈</span>
+                  <span className="v">{fmtDuration(scriptDur)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isAwaiting && awaitingStage && (
+            <div className="swid" style={{ borderColor: 'var(--ac-approve)' }}>
+              <div className="swid__head" style={{ color: 'var(--ac-approve)' }}>
+                <IcAlert size={11} /> Approval queue
+                <span className="num" style={{ color: 'var(--ac-approve)', borderColor: 'var(--ac-approve-br)', background: 'var(--ac-approve-bg)' }}>1</span>
+              </div>
+              <div className="swid__body">
+                <div style={{ fontSize: 12.5, color: 'var(--tx-1)' }}>
+                  <b style={{ textTransform: 'capitalize' }}>{awaitingStage.stageId}</b> stage is ready for review.
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--tx-3)', lineHeight: 1.5 }}>
+                  Reviewing this stage unblocks downstream stages.
+                </div>
+                <button
+                  className="btn btn--approve btn--sm"
+                  style={{ marginTop: 4 }}
+                  onClick={() => setSelectedStageId(awaitingStage.stageId)}
+                >
+                  <IcArrowR size={11} /> Jump to stage
+                </button>
+              </div>
+            </div>
+          )}
+
+          {ch && (
+            <div className="swid">
+              <div className="swid__head">Channel rules</div>
+              <div className="swid__body">
+                <dl className="rules" style={{ margin: 0 }}>
+                  <dt>Tone</dt><dd>{ch.tone}</dd>
+                  <dt>Duration</dt><dd>{fmtRange(ch.duration)}</dd>
+                  <dt>Source balance</dt>
+                  <dd>
+                    <div className="chips" style={{ marginTop: 4 }}>
+                      {ch.sources.map((s) => (
+                        <span key={s} className="tag">{s}</span>
+                      ))}
+                    </div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
     </div>
   );
 }
