@@ -41,11 +41,17 @@ export default function RunsPage() {
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [q, setQ] = useState('');
 
+  const [fetchError, setFetchError] = useState('');
+
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch('/api/runs');
-      if (res.ok) setData((await res.json()) as RunsResponse);
-    } catch { /* silent */ }
+      if (!res.ok) { setFetchError('Failed to load runs'); return; }
+      setFetchError('');
+      setData((await res.json()) as RunsResponse);
+    } catch {
+      setFetchError('Failed to load runs');
+    }
   }, []);
 
   useEffect(() => {
@@ -187,6 +193,19 @@ export default function RunsPage() {
           {filtered.length}/{runs.length}
         </div>
       </div>
+
+      {fetchError && (
+        <div style={{
+          padding: '10px 14px', marginBottom: 12,
+          border: '1px solid var(--ac-bad-br)', borderRadius: 'var(--r-2)',
+          background: 'var(--ac-bad-bg)', color: 'var(--ac-bad)',
+          fontFamily: 'var(--f-mono)', fontSize: 12,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          {fetchError}
+          <button className="btn btn--ghost btn--sm" onClick={() => void fetchData()}>Retry</button>
+        </div>
+      )}
 
       {!data ? (
         <div className="runs">

@@ -91,8 +91,12 @@ export default function RunDetailPage() {
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/runs/${id}`);
-      if (!res.ok) { setLoadError('Run not found'); return; }
+      if (!res.ok) {
+        setLoadError('Run not found');
+        return;
+      }
       const next = (await res.json()) as RunDetail;
+      setLoadError('');
       setData(next);
       if (selectedStageId === null) {
         const awaiting = next.stages.find((s) => s.status === 'awaiting_approval');
@@ -212,6 +216,11 @@ export default function RunDetailPage() {
               key={meta.id}
               className={cls('stage-node', nodeCls, selectedStageId === meta.id && 'selected')}
               onClick={() => setSelectedStageId(meta.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') setSelectedStageId(meta.id);
+              }}
             >
               <div className="stage-node__top">
                 <span className="stage-node__idx">{String(i + 1).padStart(2, '0')}</span>

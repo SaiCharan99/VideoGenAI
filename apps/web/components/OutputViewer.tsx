@@ -221,7 +221,11 @@ function OVResearch({ data }: { data: ResearchData }) {
                     {s.url && (
                       <>
                         <span className="sep">·</span>
-                        <a href={`https://${s.url}`} target="_blank" rel="noreferrer">
+                        <a
+                          href={/^https?:\/\//i.test(s.url) ? s.url : `https://${s.url}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
                           {s.url} <IcExt size={10} />
                         </a>
                       </>

@@ -77,7 +77,7 @@ export default function NewRunPage() {
               <span>Channel</span>
               <span className="req">REQUIRED</span>
             </label>
-            <div className="channels">
+            <div className="channels" role="radiogroup" aria-label="Channel">
               {CHANNELS.map((c) => (
                 <div
                   key={c.id}

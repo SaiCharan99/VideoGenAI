@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { OutputViewer } from './OutputViewer';
 import { relTime, STAGE_META } from '@/lib/stages';
 import { IcAlert, IcCheck, IcBrackets, IcCopy, IcExt, IcChev } from '@/components/ui/Icons';
@@ -89,6 +89,10 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
   const [approving, setApproving] = useState(false);
   const [approveError, setApproveError] = useState('');
 
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
+
   const isAwaiting = stage.status === 'awaiting_approval';
   const metrics = computeMetrics(stage.stageId, stage.output);
   const meta = STAGE_META[stage.stageId];
@@ -122,7 +126,11 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
       <div
         className="scard__head"
         onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') setOpen((v) => !v);
+        }}
         role="button"
+        tabIndex={0}
         aria-expanded={open}
       >
         <span className="scard__idx">{String(index + 1).padStart(2, '0')}</span>
