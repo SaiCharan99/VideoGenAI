@@ -360,6 +360,387 @@ function OVScript({ data }: { data: ScriptData }) {
   );
 }
 
+interface JargonTerm {
+  term?: string;
+  definition?: string;
+  historical_context?: string;
+}
+interface JargonData {
+  terms?: JargonTerm[];
+}
+function isJargon(v: unknown): v is JargonData {
+  return typeof v === 'object' && v !== null;
+}
+
+function OVJargon({ data }: { data: JargonData }) {
+  const terms = data.terms ?? [];
+  return (
+    <div className="ov">
+      <div className="ov__h">
+        Jargon terms · {terms.length} <span className="line" />
+      </div>
+      {terms.length === 0 ? (
+        <p style={{ color: 'var(--tx-3)', fontSize: 12 }}>No jargon terms identified.</p>
+      ) : (
+        <div>
+          {terms.map((t, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '12px 0',
+                borderBottom: i < terms.length - 1 ? '1px solid var(--br-1)' : 'none',
+              }}
+            >
+              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--tx-1)', marginBottom: 4 }}>
+                {t.term}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--tx-2)', lineHeight: 1.55 }}>
+                {t.definition}
+              </div>
+              {t.historical_context && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 12,
+                    color: 'var(--tx-3)',
+                    lineHeight: 1.5,
+                    borderLeft: '2px solid var(--br-2)',
+                    paddingLeft: 10,
+                  }}
+                >
+                  {t.historical_context}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface FactCheckIssue {
+  severity?: string;
+  scene?: number;
+  description?: string;
+  suggested_fix?: string;
+}
+interface FactCheckData {
+  verdict?: string;
+  sourcing_score?: number;
+  balance_score?: number;
+  issues?: FactCheckIssue[];
+  summary?: string;
+}
+function isFactCheck(v: unknown): v is FactCheckData {
+  return typeof v === 'object' && v !== null;
+}
+
+function OVFactCheck({ data }: { data: FactCheckData }) {
+  const issues = data.issues ?? [];
+  const criticals = issues.filter((i) => i.severity === 'critical');
+  const warnings = issues.filter((i) => i.severity === 'warning');
+  const infos = issues.filter((i) => i.severity === 'info');
+
+  const verdictColor =
+    data.verdict === 'pass'
+      ? 'var(--ac-ok)'
+      : data.verdict === 'pass_with_warnings'
+        ? 'var(--ac-approve)'
+        : 'var(--ac-bad)';
+
+  function scoreBar(score: number | undefined) {
+    const pct = Math.round((score ?? 0) * 100);
+    const color = pct >= 90 ? 'var(--ac-ok)' : pct >= 70 ? 'var(--ac-approve)' : 'var(--ac-bad)';
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: 2,
+            background: 'var(--bg-4)',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 2 }} />
+        </div>
+        <span style={{ fontFamily: 'var(--f-mono)', fontSize: 11, color, minWidth: 32 }}>
+          {pct}%
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ov">
+      <div>
+        <div className="ov__h">
+          Verdict <span className="line" />
+        </div>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 14px',
+            borderRadius: 'var(--r-2)',
+            border: `1px solid ${verdictColor}`,
+            background: `color-mix(in srgb, ${verdictColor} 10%, transparent)`,
+            color: verdictColor,
+            fontFamily: 'var(--f-mono)',
+            fontSize: 13,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 16,
+          }}
+        >
+          {data.verdict ?? '—'}
+        </div>
+        {data.summary && (
+          <div style={{ fontSize: 13, color: 'var(--tx-2)', lineHeight: 1.6 }}>{data.summary}</div>
+        )}
+      </div>
+
+      <div className="ov__kv">
+        <div>
+          <span className="k">Sourcing</span>
+          <span className="v">{scoreBar(data.sourcing_score)}</span>
+        </div>
+        <div>
+          <span className="k">Balance</span>
+          <span className="v">{scoreBar(data.balance_score)}</span>
+        </div>
+        <div>
+          <span className="k">Critical issues</span>
+          <span
+            className="v"
+            style={{ color: criticals.length > 0 ? 'var(--ac-bad)' : 'var(--ac-ok)' }}
+          >
+            {criticals.length}
+          </span>
+        </div>
+        <div>
+          <span className="k">Warnings</span>
+          <span
+            className="v"
+            style={{ color: warnings.length > 0 ? 'var(--ac-approve)' : 'var(--tx-1)' }}
+          >
+            {warnings.length}
+          </span>
+        </div>
+      </div>
+
+      {issues.length > 0 && (
+        <div>
+          <div className="ov__h">
+            Issues · {issues.length} <span className="line" />
+          </div>
+          <div>
+            {[...criticals, ...warnings, ...infos].map((issue, i) => {
+              const sev = issue.severity ?? 'info';
+              const color =
+                sev === 'critical'
+                  ? 'var(--ac-bad)'
+                  : sev === 'warning'
+                    ? 'var(--ac-approve)'
+                    : 'var(--tx-3)';
+              return (
+                <div
+                  key={i}
+                  style={{
+                    padding: '10px 14px',
+                    marginBottom: 6,
+                    borderRadius: 'var(--r-2)',
+                    border: `1px solid ${color}`,
+                    background: `color-mix(in srgb, ${color} 8%, transparent)`,
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--f-mono)',
+                        fontSize: 10,
+                        color,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                      }}
+                    >
+                      {sev}
+                    </span>
+                    {issue.scene !== undefined && (
+                      <span
+                        style={{ fontFamily: 'var(--f-mono)', fontSize: 10, color: 'var(--tx-4)' }}
+                      >
+                        scene {issue.scene}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--tx-1)' }}>{issue.description}</div>
+                  {issue.suggested_fix && (
+                    <div style={{ fontSize: 12, color: 'var(--tx-3)', marginTop: 4 }}>
+                      Fix: {issue.suggested_fix}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface StoryboardScene {
+  scene?: number;
+  duration_seconds?: number;
+  visual_kind?: string;
+  visual_description?: string;
+  text_overlay?: string;
+  audio_note?: string;
+}
+interface StoryboardData {
+  scenes?: StoryboardScene[];
+}
+function isStoryboard(v: unknown): v is StoryboardData {
+  return typeof v === 'object' && v !== null;
+}
+
+const VISUAL_KIND_COLORS: Record<string, string> = {
+  text_card: '#b48cff',
+  kinetic_text: '#00e5ff',
+  chart: '#3ef0a3',
+  stock_broll: '#ffb020',
+  generated_still: '#ff5470',
+  generated_clip: '#ff5470',
+  map: '#3ef0a3',
+};
+
+function OVStoryboard({ data }: { data: StoryboardData }) {
+  const scenes = data.scenes ?? [];
+  const totalDur = scenes.reduce((a, s) => a + (s.duration_seconds ?? 0), 0);
+
+  return (
+    <div className="ov">
+      <div>
+        <div className="ov__h">
+          Overview <span className="line" />
+        </div>
+        <div className="ov__kv">
+          <div>
+            <span className="k">Scenes</span>
+            <span className="v">{scenes.length}</span>
+          </div>
+          <div>
+            <span className="k">Total duration</span>
+            <span className="v">{fmtDuration(Math.round(totalDur))}</span>
+          </div>
+          <div>
+            <span className="k">Visual kinds</span>
+            <span className="v">{new Set(scenes.map((s) => s.visual_kind)).size}</span>
+          </div>
+        </div>
+      </div>
+
+      {scenes.length > 0 && (
+        <div>
+          <div className="ov__h">
+            Scenes · {scenes.length} <span className="line" />
+          </div>
+          <div>
+            {scenes.map((s, i) => {
+              const kindColor = VISUAL_KIND_COLORS[s.visual_kind ?? ''] ?? 'var(--tx-3)';
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '44px 1fr',
+                    gap: 14,
+                    padding: '12px 0',
+                    borderBottom: i < scenes.length - 1 ? '1px solid var(--br-1)' : 'none',
+                    alignItems: 'start',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: 'var(--f-mono)',
+                      fontSize: 11,
+                      color: 'var(--tx-3)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                    }}
+                  >
+                    <span>Scene</span>
+                    <b style={{ color: 'var(--tx-1)', fontSize: 13 }}>
+                      {String(s.scene ?? i + 1).padStart(2, '0')}
+                    </b>
+                    <span style={{ color: 'var(--tx-4)', fontSize: 10 }}>
+                      {s.duration_seconds ?? 0}s
+                    </span>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <span
+                        style={{
+                          fontFamily: 'var(--f-mono)',
+                          fontSize: 10,
+                          color: kindColor,
+                          background: `color-mix(in srgb, ${kindColor} 12%, transparent)`,
+                          border: `1px solid color-mix(in srgb, ${kindColor} 35%, transparent)`,
+                          padding: '1px 6px',
+                          borderRadius: 3,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                        }}
+                      >
+                        {s.visual_kind ?? '—'}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: 'var(--tx-1)',
+                        lineHeight: 1.5,
+                        marginBottom: 4,
+                      }}
+                    >
+                      {s.visual_description}
+                    </div>
+                    {s.text_overlay && (
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: 'var(--tx-2)',
+                          fontFamily: 'var(--f-mono)',
+                          background: 'var(--bg-inset)',
+                          padding: '4px 8px',
+                          borderRadius: 'var(--r-1)',
+                          marginBottom: 4,
+                        }}
+                      >
+                        "{s.text_overlay}"
+                      </div>
+                    )}
+                    {s.audio_note && (
+                      <div style={{ fontSize: 11.5, color: 'var(--tx-3)', fontStyle: 'italic' }}>
+                        🎙 {s.audio_note}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OutputViewer({ output, stageId }: Props) {
   const [view, setView] = useState<'formatted' | 'json'>('formatted');
 
@@ -374,7 +755,15 @@ export function OutputViewer({ output, stageId }: Props) {
   const jsonSize = JSON.stringify(output).length;
   const jsonSizeLabel = jsonSize > 1024 ? `${Math.round(jsonSize / 1024)}k` : `${jsonSize}b`;
 
-  const hasFormatted = stageId === 'brief' || stageId === 'research' || stageId === 'script';
+  const FORMATTED_STAGES = new Set([
+    'brief',
+    'research',
+    'script',
+    'jargon',
+    'fact-check',
+    'storyboard',
+  ]);
+  const hasFormatted = FORMATTED_STAGES.has(stageId);
 
   return (
     <div>
@@ -403,6 +792,12 @@ export function OutputViewer({ output, stageId }: Props) {
         <OVResearch data={output} />
       ) : stageId === 'script' && isScript(output) ? (
         <OVScript data={output} />
+      ) : stageId === 'jargon' && isJargon(output) ? (
+        <OVJargon data={output} />
+      ) : stageId === 'fact-check' && isFactCheck(output) ? (
+        <OVFactCheck data={output} />
+      ) : stageId === 'storyboard' && isStoryboard(output) ? (
+        <OVStoryboard data={output} />
       ) : (
         <JsonView data={output} />
       )}

@@ -60,6 +60,22 @@ export const scriptSchema = z.object({
 });
 export type Script = z.infer<typeof scriptSchema>;
 
+export const factCheckReportSchema = z.object({
+  verdict: z.enum(['pass', 'pass_with_warnings', 'fail']),
+  sourcing_score: z.number().min(0).max(1),
+  balance_score: z.number().min(0).max(1),
+  issues: z.array(
+    z.object({
+      severity: z.enum(['critical', 'warning', 'info']),
+      scene: z.number().int().optional(),
+      description: z.string(),
+      suggested_fix: z.string().optional(),
+    }),
+  ),
+  summary: z.string(),
+});
+export type FactCheckReport = z.infer<typeof factCheckReportSchema>;
+
 export const storyboardSceneSchema = z.object({
   scene: z.number().int(),
   duration_seconds: z.number(),

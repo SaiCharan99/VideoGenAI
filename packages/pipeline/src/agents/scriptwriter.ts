@@ -1,6 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { type ChannelConfig } from '@videogenai/channels';
-import { type Brief, type FactPack, scriptSchema, type Script } from '@videogenai/types';
+import {
+  type Brief,
+  type FactPack,
+  type JargonList,
+  scriptSchema,
+  type Script,
+} from '@videogenai/types';
 import { markStageAwaitingApproval, markStageRunning } from '../db-ops.js';
 import { createLogger } from '../logger.js';
 
@@ -12,11 +18,12 @@ export async function runScriptwriter(
   runId: string,
   brief: Brief,
   factPack: FactPack,
+  jargon: JargonList,
   channel: ChannelConfig,
 ): Promise<Script> {
   const logger = createLogger(runId, 'script');
   await markStageRunning(runId, 'script');
-  logger.info('starting', { facts: factPack.facts.length });
+  logger.info('starting', { facts: factPack.facts.length, jargonTerms: jargon.terms.length });
 
   const response = await client.messages.create({
     model: 'claude-opus-4-7',
@@ -33,7 +40,7 @@ export async function runScriptwriter(
     messages: [
       {
         role: 'user',
-        content: buildUserPrompt(brief, factPack, channel),
+        content: buildUserPrompt(brief, factPack, jargon, channel),
       },
     ],
   });
@@ -93,11 +100,20 @@ Rules (non-negotiable):
 ${channel.bias_rules.map((r) => `- ${r}`).join('\n')}`;
 }
 
-function buildUserPrompt(brief: Brief, factPack: FactPack, channel: ChannelConfig): string {
+function buildUserPrompt(
+  brief: Brief,
+  factPack: FactPack,
+  jargon: JargonList,
+  channel: ChannelConfig,
+): string {
   const factsText = factPack.facts.map((f) => `[${f.source_ids.join(',')}] ${f.claim}`).join('\n');
   const sourcesText = factPack.sources
     .map((s) => `${s.id}: ${s.publication} — "${s.title}" (${s.url})`)
     .join('\n');
+  const jargonText =
+    jargon.terms.length > 0
+      ? jargon.terms.map((t) => `- ${t.term}: ${t.definition}`).join('\n')
+      : '(none identified)';
 
   return `BRIEF:
 Angle: ${brief.angle}
@@ -107,13 +123,16 @@ Must avoid: ${brief.must_avoid.join(' | ')}
 Tone: ${brief.tone_note}
 Target: ${channel.length_target_seconds[0]}–${channel.length_target_seconds[1]} seconds
 
+JARGON GUIDE — define each term inline on first use (${jargon.terms.length} terms):
+${jargonText}
+
 FACT PACK (${factPack.facts.length} facts, ${factPack.sources.length} sources):
 ${factsText}
 
 SOURCES:
 ${sourcesText}
 
-Write the complete video script. Every factual line must cite its source_ids.`;
+Write the complete video script. Every factual line must cite its source_ids. Define every jargon term inline on first use.`;
 }
 
 function scriptTool(): Anthropic.Tool {
