@@ -1,5 +1,19 @@
 import type { Metadata } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { AppShell } from '@/components/AppShell';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'VideoGenAI Cockpit',
@@ -8,15 +22,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen">
-        <header className="border-b border-[var(--border)] px-6 py-3 flex items-center gap-3">
-          <span className="font-mono font-bold text-[var(--accent)] tracking-tight">
-            VideoGenAI
-          </span>
-          <span className="text-[var(--muted)] text-xs">cockpit</span>
-        </header>
-        <main className="max-w-4xl mx-auto px-6 py-8">{children}</main>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

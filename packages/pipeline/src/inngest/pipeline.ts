@@ -2,8 +2,11 @@ import { loadChannel } from '@videogenai/channels';
 import { db, runs } from '@videogenai/db';
 import { eq } from 'drizzle-orm';
 import { runBriefBuilder } from '../agents/brief-builder.js';
+import { runFactChecker } from '../agents/fact-checker.js';
+import { runJargonMiner } from '../agents/jargon-miner.js';
 import { runResearcher } from '../agents/researcher.js';
 import { runScriptwriter } from '../agents/scriptwriter.js';
+import { runStoryboarder } from '../agents/storyboarder.js';
 import { markStageFailed } from '../db-ops.js';
 import { inngest } from './client.js';
 
@@ -64,10 +67,20 @@ export const pipelineRun = inngest.createFunction(
     });
     if (!researchApproval) throw new Error('research stage approval timed out after 7 days');
 
+    // ── Stage 3: Jargon (auto-approved, no gate) ────────────────────────────
+    const jargon = await step.run('stage/jargon', async () => {
+      try {
+        return await runJargonMiner(runId, brief, factPack, channel);
+      } catch (err) {
+        await markStageFailed(runId, 'jargon', String(err));
+        throw err;
+      }
+    });
+
     // ── Stage 4: Script ─────────────────────────────────────────────────────
     const script = await step.run('stage/script', async () => {
       try {
-        return await runScriptwriter(runId, brief, factPack, channel);
+        return await runScriptwriter(runId, brief, factPack, jargon, channel);
       } catch (err) {
         await markStageFailed(runId, 'script', String(err));
         throw err;
@@ -81,11 +94,35 @@ export const pipelineRun = inngest.createFunction(
     });
     if (!scriptApproval) throw new Error('script stage approval timed out after 7 days');
 
+    // ── Stage 5: Fact-check ─────────────────────────────────────────────────
+    const factCheckReport = await step.run('stage/fact-check', async () =>
+      runFactChecker(runId, script, factPack, channel),
+    );
+
+    const factCheckApproval = await step.waitForEvent('fact-check/approved', {
+      event: 'videogenai/stage.approved',
+      if: `event.data.runId == async.data.runId && async.data.stageId == 'fact-check'`,
+      timeout: '7d',
+    });
+    if (!factCheckApproval) throw new Error('fact-check stage approval timed out after 7 days');
+
+    // ── Stage 6: Storyboard ─────────────────────────────────────────────────
+    const storyboard = await step.run('stage/storyboard', async () =>
+      runStoryboarder(runId, brief, script, jargon, channel),
+    );
+
+    const storyboardApproval = await step.waitForEvent('storyboard/approved', {
+      event: 'videogenai/stage.approved',
+      if: `event.data.runId == async.data.runId && async.data.stageId == 'storyboard'`,
+      timeout: '7d',
+    });
+    if (!storyboardApproval) throw new Error('storyboard stage approval timed out after 7 days');
+
     await db
       .update(runs)
       .set({ status: 'complete', updatedAt: new Date() })
       .where(eq(runs.id, runId));
 
-    return { runId, brief, factPack, script };
+    return { runId, brief, factPack, jargon, script, factCheckReport, storyboard };
   },
 );

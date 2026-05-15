@@ -1,6 +1,6 @@
-import { db, runs } from '@videogenai/db';
+import { db, runs, stages } from '@videogenai/db';
 import { inngest } from '@videogenai/pipeline';
-import { desc } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -10,11 +10,12 @@ const createRunSchema = z.object({
 });
 
 export async function GET() {
-  const allRuns = await db.query.runs.findMany({
-    orderBy: [desc(runs.createdAt)],
-    limit: 50,
-  });
-  return NextResponse.json(allRuns);
+  const [allRuns, awaitingRows] = await Promise.all([
+    db.query.runs.findMany({ orderBy: [desc(runs.createdAt)], limit: 50 }),
+    db.select({ count: count() }).from(stages).where(eq(stages.status, 'awaiting_approval')),
+  ]);
+
+  return NextResponse.json({ runs: allRuns, awaitingApproval: awaitingRows[0]?.count ?? 0 });
 }
 
 export async function POST(req: Request) {
