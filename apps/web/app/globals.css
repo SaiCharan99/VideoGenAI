@@ -2023,3 +2023,129 @@ button {
     grid-template-columns: 1.4fr 100px 28px;
   }
 }
+
+/* ─── LLM provider toggle ──────────────────────────────────────────────────── */
+.llm-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--br-2);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--tx-2);
+  transition: border-color 0.15s, color 0.15s;
+}
+.llm-toggle:hover {
+  border-color: var(--br-3);
+  color: var(--tx-1);
+}
+.llm-toggle__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.llm-toggle--anthropic .llm-toggle__dot {
+  background: var(--ac-active);
+  box-shadow: 0 0 6px var(--ac-active);
+}
+.llm-toggle--openai .llm-toggle__dot {
+  background: #74c69d;
+  box-shadow: 0 0 6px #74c69d;
+}
+
+/* ─── Confirmation modal ───────────────────────────────────────────────────── */
+.llm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(3px);
+}
+.llm-modal {
+  background: #0d0d10;
+  border: 1px solid var(--br-3);
+  border-radius: 10px;
+  padding: 28px;
+  width: 400px;
+  box-shadow: var(--sh-pop);
+}
+.llm-modal__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tx-1);
+  margin-bottom: 14px;
+}
+.llm-modal__body {
+  font-size: 13px;
+  color: var(--tx-2);
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+.llm-modal__body p {
+  margin: 0 0 6px;
+}
+.llm-modal__body p:last-child {
+  margin-bottom: 0;
+}
+.llm-modal__body strong {
+  color: var(--tx-1);
+  font-weight: 600;
+}
+.llm-modal__note {
+  color: var(--tx-3);
+  font-size: 12px;
+}
+.llm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.llm-modal__cancel {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--br-2);
+  background: transparent;
+  color: var(--tx-2);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.llm-modal__cancel:hover:not(:disabled) {
+  border-color: var(--br-3);
+  color: var(--tx-1);
+}
+.llm-modal__confirm {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.llm-modal__confirm:hover:not(:disabled) {
+  opacity: 0.88;
+}
+.llm-modal__confirm:disabled,
+.llm-modal__cancel:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.llm-modal__confirm--anthropic {
+  background: var(--ac-active);
+  color: #000;
+  border-color: var(--ac-active);
+}
+.llm-modal__confirm--openai {
+  background: #74c69d;
+  color: #000;
+  border-color: #74c69d;
+}

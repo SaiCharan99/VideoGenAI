@@ -1,6 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { type ZodType } from 'zod';
+import { resolveProvider } from './settings.js';
 
+/**
+ * Shared LLM adapter for all pipeline agents.
+ * It keeps provider selection in one place, prefers Codex/OpenAI credentials,
+ * falls back to Anthropic when needed, and validates every model response
+ * against the stage's zod schema before the rest of the pipeline sees it.
+ */
 interface GenerateStructuredOptions<T> {
   stageName: string;
   schemaName: string;
@@ -49,40 +56,20 @@ export async function generateStructuredOutput<T>(
   return parsed.data;
 }
 
-/**
- * Kill switch: set LLM_PROVIDER=anthropic or LLM_PROVIDER=openai to force a provider.
- * When unset, falls back to whichever API key is present (OpenAI checked first).
- */
 async function generateRaw<T>(options: GenerateStructuredOptions<T>): Promise<unknown> {
-  const provider = process.env.LLM_PROVIDER;
-
-  if (provider === 'anthropic') {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error(
-        `${options.stageName}: LLM_PROVIDER=anthropic but ANTHROPIC_API_KEY is not set.`,
-      );
-    }
-    return generateWithAnthropic(options);
-  }
+  const provider = resolveProvider();
 
   if (provider === 'openai') {
     const apiKey = process.env.CODEX_API_KEY ?? process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error(
-        `${options.stageName}: LLM_PROVIDER=openai but neither OPENAI_API_KEY nor CODEX_API_KEY is set.`,
+        `${options.stageName}: provider resolved to openai but neither OPENAI_API_KEY nor CODEX_API_KEY is set.`,
       );
     }
     return generateWithOpenAi(apiKey, options);
   }
 
-  // Key-presence fallback when LLM_PROVIDER is unset
-  const openAiApiKey = process.env.CODEX_API_KEY ?? process.env.OPENAI_API_KEY;
-  if (openAiApiKey) return generateWithOpenAi(openAiApiKey, options);
-  if (process.env.ANTHROPIC_API_KEY) return generateWithAnthropic(options);
-
-  throw new Error(
-    `${options.stageName}: no LLM provider configured — set LLM_PROVIDER=anthropic or LLM_PROVIDER=openai and the corresponding API key.`,
-  );
+  return generateWithAnthropic(options);
 }
 
 async function generateWithOpenAi<T>(

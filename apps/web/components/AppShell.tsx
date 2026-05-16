@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CHANNELS } from '@/lib/channels';
 import { IcRuns, IcChannels, IcPlus, IcSearch, IcSettings, IcChev } from '@/components/ui/Icons';
+import { LLMToggle } from '@/components/LLMToggle';
 
 function cls(...args: (string | boolean | undefined | null)[]) {
   return args.filter(Boolean).join(' ');
@@ -56,6 +57,7 @@ function Header() {
       </div>
       <div className="hdr__crumbs">{crumbs}</div>
       <div className="hdr__right">
+        <LLMToggle />
         <span className="hdr__chip">
           <span className="dot" /> Inngest
         </span>
