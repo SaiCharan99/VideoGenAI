@@ -9,10 +9,10 @@ const LABEL: Record<Provider, string> = { anthropic: 'Claude', openai: 'OpenAI' 
 /* ─── Brand icons ──────────────────────────────────────────────────────────── */
 
 function ClaudeIcon({ size = 13 }: { size?: number }) {
-  // Anthropic logomark — angular A with raised crossbar
+  // Anthropic official logomark
   return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path d="M10 2L18.5 17.5H12.8L11.4 14H8.6L7.2 17.5H1.5L10 2zm0 5L8.1 12h3.8L10 7z" />
+    <svg width={size} height={size} viewBox="0 0 46 32" fill="currentColor" aria-hidden="true">
+      <path d="M32.73 0h-6.945L14.54 32h6.945l11.245-32zM18.58 0H11.635L0 32h7.006z" />
     </svg>
   );
 }
