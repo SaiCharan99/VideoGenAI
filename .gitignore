@@ -15,6 +15,9 @@ out/
 .env.*.local
 !.env.example
 
+# Runtime cockpit settings (written by the LLM toggle)
+.videogenai-settings.json
+
 # Runs / generated artifacts
 /runs/
 packages/pipeline/runs/

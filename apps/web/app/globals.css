@@ -2023,3 +2023,174 @@ button {
     grid-template-columns: 1.4fr 100px 28px;
   }
 }
+
+/* ─── LLM provider segmented toggle ───────────────────────────────────────── */
+.llm-seg {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--br-2);
+  overflow: hidden;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.llm-seg--anthropic {
+  border-color: rgba(217, 119, 87, 0.55);
+  box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.12);
+}
+.llm-seg--openai {
+  border-color: #ffffff;
+  box-shadow: none;
+}
+.llm-seg__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--tx-4);
+  transition:
+    background 0.15s,
+    color 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.llm-seg__opt:first-child {
+  border-right: 1px solid var(--br-2);
+}
+/* Active segment — Claude */
+.llm-seg--anthropic .llm-seg__opt:first-child {
+  background: rgba(217, 119, 87, 0.1);
+  color: #d97757;
+  cursor: default;
+}
+/* Active segment — OpenAI: white ghost */
+.llm-seg--openai .llm-seg__opt:last-child {
+  background: transparent;
+  color: #ffffff;
+  cursor: default;
+}
+/* Hover on the inactive segment */
+.llm-seg--openai .llm-seg__opt:first-child:hover {
+  background: rgba(217, 119, 87, 0.06);
+  color: var(--tx-2);
+}
+.llm-seg--anthropic .llm-seg__opt:last-child:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--tx-2);
+}
+
+/* ─── Confirmation modal ───────────────────────────────────────────────────── */
+.llm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  backdrop-filter: blur(3px);
+}
+.llm-modal {
+  background: #0d0d10;
+  border: 1px solid var(--br-3);
+  border-radius: 10px;
+  padding: 28px;
+  width: 400px;
+  box-shadow: var(--sh-pop);
+  transition: border-color 0.2s;
+}
+.llm-modal--anthropic {
+  border-color: rgba(217, 119, 87, 0.35);
+}
+.llm-modal--openai {
+  border-color: #ffffff;
+}
+.llm-modal__icon {
+  margin-bottom: 14px;
+}
+.llm-modal--anthropic .llm-modal__icon {
+  color: #d97757;
+}
+.llm-modal--openai .llm-modal__icon {
+  color: #ffffff;
+}
+.llm-modal__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tx-1);
+  margin-bottom: 10px;
+}
+.llm-modal__body {
+  font-size: 13px;
+  color: var(--tx-2);
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+.llm-modal__body p {
+  margin: 0 0 6px;
+}
+.llm-modal__body p:last-child {
+  margin-bottom: 0;
+}
+.llm-modal__body strong {
+  color: var(--tx-1);
+  font-weight: 600;
+}
+.llm-modal__note {
+  color: var(--tx-3);
+  font-size: 12px;
+}
+.llm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.llm-modal__cancel {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--br-2);
+  background: transparent;
+  color: var(--tx-2);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+.llm-modal__cancel:hover:not(:disabled) {
+  border-color: var(--br-3);
+  color: var(--tx-1);
+}
+.llm-modal__confirm {
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.llm-modal__confirm:hover:not(:disabled) {
+  opacity: 0.88;
+}
+.llm-modal__confirm:disabled,
+.llm-modal__cancel:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.llm-modal__confirm--anthropic {
+  background: #d97757;
+  color: #fff;
+  border-color: #d97757;
+}
+.llm-modal__confirm--openai {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}

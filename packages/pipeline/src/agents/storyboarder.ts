@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { type ChannelConfig } from '@videogenai/channels';
 import {
   type Brief,
@@ -8,9 +7,8 @@ import {
   type Storyboard,
 } from '@videogenai/types';
 import { markStageRunning, markStageAwaitingApproval, markStageFailed } from '../db-ops.js';
+import { generateStructuredOutput } from '../llm.js';
 import { createLogger } from '../logger.js';
-
-const client = new Anthropic();
 
 const TOOL_NAME = 'submit_storyboard';
 
@@ -26,50 +24,31 @@ export async function runStoryboarder(
   logger.info('starting', { scenes: new Set(script.lines.map((l) => l.scene)).size });
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-opus-4-7',
-      max_tokens: 8192,
-      system: [
-        {
-          type: 'text',
-          text: buildSystemPrompt(channel),
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      tools: [storyboardTool()],
-      tool_choice: { type: 'tool', name: TOOL_NAME },
-      messages: [
-        {
-          role: 'user',
-          content: buildUserPrompt(brief, script, jargon, channel),
-        },
-      ],
+    const storyboard = await generateStructuredOutput({
+      stageName: 'Storyboarder',
+      schemaName: TOOL_NAME,
+      schemaDescription: 'Submit the completed storyboard with one entry per scene',
+      jsonSchema: storyboardTool(),
+      outputSchema: storyboardSchema,
+      systemPrompt: buildSystemPrompt(channel),
+      userPrompt: buildUserPrompt(brief, script, jargon, channel),
+      maxTokens: 8192,
     });
-
-    const toolUse = response.content.find((b) => b.type === 'tool_use');
-    if (toolUse?.type !== 'tool_use') {
-      throw new Error('Storyboarder: model did not call the expected tool');
-    }
-
-    const parsed = storyboardSchema.safeParse(toolUse.input);
-    if (!parsed.success) {
-      throw new Error(`Storyboarder: invalid output — ${parsed.error.toString()}`);
-    }
 
     // Every scene in the script must have a corresponding storyboard entry
     const scriptScenes = new Set(script.lines.map((l) => l.scene));
-    const boardScenes = new Set(parsed.data.scenes.map((s) => s.scene));
+    const boardScenes = new Set(storyboard.scenes.map((s) => s.scene));
     const missing = [...scriptScenes].filter((s) => !boardScenes.has(s));
     if (missing.length > 0) {
       throw new Error(`Storyboarder: missing storyboard entries for scenes: ${missing.join(', ')}`);
     }
 
-    await markStageAwaitingApproval(runId, 'storyboard', parsed.data);
+    await markStageAwaitingApproval(runId, 'storyboard', storyboard);
     logger.info('complete', {
-      scenes: parsed.data.scenes.length,
-      visualKinds: [...new Set(parsed.data.scenes.map((s) => s.visual_kind))].join(', '),
+      scenes: storyboard.scenes.length,
+      visualKinds: [...new Set(storyboard.scenes.map((s) => s.visual_kind))].join(', '),
     });
-    return parsed.data;
+    return storyboard;
   } catch (err) {
     await markStageFailed(runId, 'storyboard', String(err));
     throw err;
@@ -143,53 +122,49 @@ ${jargonText}
 Create a complete storyboard — one entry per scene number. The total duration_seconds across all scenes should sum to approximately ${script.estimated_duration_seconds}s.`;
 }
 
-function storyboardTool(): Anthropic.Tool {
+function storyboardTool() {
   return {
-    name: TOOL_NAME,
-    description: 'Submit the completed storyboard with one entry per scene',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        scenes: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              scene: { type: 'number', description: 'Scene number (matches script)' },
-              duration_seconds: {
-                type: 'number',
-                description: 'Duration of this scene in seconds',
-              },
-              visual_kind: {
-                type: 'string',
-                enum: [
-                  'text_card',
-                  'kinetic_text',
-                  'chart',
-                  'stock_broll',
-                  'generated_still',
-                  'generated_clip',
-                  'map',
-                ],
-              },
-              visual_description: {
-                type: 'string',
-                description: 'Precise visual brief for the asset generator or renderer',
-              },
-              text_overlay: {
-                type: 'string',
-                description: 'Text to show on screen (if any)',
-              },
-              audio_note: {
-                type: 'string',
-                description: 'Note for TTS or music (pacing, emphasis, silence, etc.)',
-              },
+    type: 'object' as const,
+    properties: {
+      scenes: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            scene: { type: 'number', description: 'Scene number (matches script)' },
+            duration_seconds: {
+              type: 'number',
+              description: 'Duration of this scene in seconds',
             },
-            required: ['scene', 'duration_seconds', 'visual_kind', 'visual_description'],
+            visual_kind: {
+              type: 'string',
+              enum: [
+                'text_card',
+                'kinetic_text',
+                'chart',
+                'stock_broll',
+                'generated_still',
+                'generated_clip',
+                'map',
+              ],
+            },
+            visual_description: {
+              type: 'string',
+              description: 'Precise visual brief for the asset generator or renderer',
+            },
+            text_overlay: {
+              type: 'string',
+              description: 'Text to show on screen (if any)',
+            },
+            audio_note: {
+              type: 'string',
+              description: 'Note for TTS or music (pacing, emphasis, silence, etc.)',
+            },
           },
+          required: ['scene', 'duration_seconds', 'visual_kind', 'visual_description'],
         },
       },
-      required: ['scenes'],
     },
+    required: ['scenes'],
   };
 }

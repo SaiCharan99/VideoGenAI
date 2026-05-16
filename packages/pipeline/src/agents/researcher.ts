@@ -1,11 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { type ChannelConfig } from '@videogenai/channels';
 import { type Brief, factPackSchema, type FactPack } from '@videogenai/types';
 import { markStageAwaitingApproval, markStageRunning } from '../db-ops.js';
+import { generateStructuredOutput } from '../llm.js';
 import { createLogger } from '../logger.js';
 import { braveSearch, fetchPageText } from '../skills/search.js';
-
-const client = new Anthropic();
 
 const TOOL_NAME = 'submit_fact_pack';
 
@@ -54,45 +52,26 @@ export async function runResearcher(
     )
     .join('\n\n---\n\n');
 
-  const response = await client.messages.create({
-    model: 'claude-opus-4-7',
-    max_tokens: 4096,
-    system: [
-      {
-        type: 'text',
-        text: buildSystemPrompt(channel),
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    tools: [factPackTool()],
-    tool_choice: { type: 'tool', name: TOOL_NAME },
-    messages: [
-      {
-        role: 'user',
-        content: `VIDEO BRIEF:\nAngle: ${brief.angle}\nMust cover: ${brief.must_cover.join(', ')}\nMust avoid: ${brief.must_avoid.join(', ')}\n\nSOURCES:\n${sourceContext}`,
-      },
-    ],
+  const factPack = await generateStructuredOutput({
+    stageName: 'Researcher',
+    schemaName: TOOL_NAME,
+    schemaDescription: 'Submit the structured fact pack extracted from the sources',
+    jsonSchema: factPackTool(),
+    outputSchema: factPackSchema,
+    systemPrompt: buildSystemPrompt(channel),
+    userPrompt: `VIDEO BRIEF:\nAngle: ${brief.angle}\nMust cover: ${brief.must_cover.join(', ')}\nMust avoid: ${brief.must_avoid.join(', ')}\n\nSOURCES:\n${sourceContext}`,
+    maxTokens: 4096,
   });
 
-  const toolUse = response.content.find((b) => b.type === 'tool_use');
-  if (toolUse?.type !== 'tool_use') {
-    throw new Error('Researcher: model did not call the expected tool');
-  }
-
-  const parsed = factPackSchema.safeParse(toolUse.input);
-  if (!parsed.success) {
-    throw new Error(`Researcher: invalid output — ${parsed.error.toString()}`);
-  }
-
-  if (parsed.data.sources.length < channel.research.min_sources) {
+  if (factPack.sources.length < channel.research.min_sources) {
     throw new Error(
-      `Researcher: only ${parsed.data.sources.length} sources found, need at least ${channel.research.min_sources}`,
+      `Researcher: only ${factPack.sources.length} sources found, need at least ${channel.research.min_sources}`,
     );
   }
 
   // Verify source provenance: every source ID cited in facts must exist in the returned sources
-  const returnedSourceIds = new Set(parsed.data.sources.map((s) => s.id));
-  const phantomIds = parsed.data.facts
+  const returnedSourceIds = new Set(factPack.sources.map((s) => s.id));
+  const phantomIds = factPack.facts
     .flatMap((f) => f.source_ids)
     .filter((id) => !returnedSourceIds.has(id));
   if (phantomIds.length > 0) {
@@ -101,13 +80,13 @@ export async function runResearcher(
     );
   }
 
-  await markStageAwaitingApproval(runId, 'research', parsed.data);
+  await markStageAwaitingApproval(runId, 'research', factPack);
   logger.info('complete', {
-    sources: parsed.data.sources.length,
-    facts: parsed.data.facts.length,
-    balancePassed: parsed.data.balance_check.passed,
+    sources: factPack.sources.length,
+    facts: factPack.facts.length,
+    balancePassed: factPack.balance_check.passed,
   });
-  return parsed.data;
+  return factPack;
 }
 
 function buildQueries(brief: Brief, channel: ChannelConfig): string[] {
@@ -143,58 +122,54 @@ Rules:
 Bias rules to enforce:\n${channel.bias_rules.map((r) => `- ${r}`).join('\n')}`;
 }
 
-function factPackTool(): Anthropic.Tool {
+function factPackTool() {
   return {
-    name: TOOL_NAME,
-    description: 'Submit the structured fact pack extracted from the sources',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        sources: {
-          type: 'array',
-          description: 'The sources you are selecting and citing',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              title: { type: 'string' },
-              url: { type: 'string' },
-              publication: { type: 'string' },
-              published_at: { type: 'string' },
-              excerpt: {
-                type: 'string',
-                description: 'The most relevant quote or summary from this source',
-              },
-            },
-            required: ['id', 'title', 'url', 'publication', 'excerpt'],
-          },
-        },
-        facts: {
-          type: 'array',
-          description: 'Discrete, attributable facts for the script writer to draw on',
-          items: {
-            type: 'object',
-            properties: {
-              claim: { type: 'string' },
-              source_ids: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'IDs from the sources array above',
-              },
-            },
-            required: ['claim', 'source_ids'],
-          },
-        },
-        balance_check: {
+    type: 'object' as const,
+    properties: {
+      sources: {
+        type: 'array',
+        description: 'The sources you are selecting and citing',
+        items: {
           type: 'object',
           properties: {
-            passed: { type: 'boolean' },
-            note: { type: 'string' },
+            id: { type: 'string' },
+            title: { type: 'string' },
+            url: { type: 'string' },
+            publication: { type: 'string' },
+            published_at: { type: 'string' },
+            excerpt: {
+              type: 'string',
+              description: 'The most relevant quote or summary from this source',
+            },
           },
-          required: ['passed'],
+          required: ['id', 'title', 'url', 'publication', 'excerpt'],
         },
       },
-      required: ['sources', 'facts', 'balance_check'],
+      facts: {
+        type: 'array',
+        description: 'Discrete, attributable facts for the script writer to draw on',
+        items: {
+          type: 'object',
+          properties: {
+            claim: { type: 'string' },
+            source_ids: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'IDs from the sources array above',
+            },
+          },
+          required: ['claim', 'source_ids'],
+        },
+      },
+      balance_check: {
+        type: 'object',
+        properties: {
+          passed: { type: 'boolean' },
+          note: { type: 'string' },
+        },
+        required: ['passed'],
+      },
     },
+    required: ['sources', 'facts', 'balance_check'],
   };
 }

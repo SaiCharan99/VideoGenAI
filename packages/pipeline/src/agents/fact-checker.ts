@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { type ChannelConfig } from '@videogenai/channels';
 import {
   type FactPack,
@@ -7,9 +6,8 @@ import {
   type FactCheckReport,
 } from '@videogenai/types';
 import { markStageRunning, markStageAwaitingApproval, markStageFailed } from '../db-ops.js';
+import { generateStructuredOutput } from '../llm.js';
 import { createLogger } from '../logger.js';
-
-const client = new Anthropic();
 
 const TOOL_NAME = 'submit_fact_check';
 
@@ -24,44 +22,25 @@ export async function runFactChecker(
   logger.info('starting', { lines: script.lines.length, sources: factPack.sources.length });
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-opus-4-7',
-      max_tokens: 4096,
-      system: [
-        {
-          type: 'text',
-          text: buildSystemPrompt(channel),
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      tools: [factCheckTool()],
-      tool_choice: { type: 'tool', name: TOOL_NAME },
-      messages: [
-        {
-          role: 'user',
-          content: buildUserPrompt(script, factPack, channel),
-        },
-      ],
+    const report = await generateStructuredOutput({
+      stageName: 'FactChecker',
+      schemaName: TOOL_NAME,
+      schemaDescription: 'Submit the completed fact-check and editorial audit report',
+      jsonSchema: factCheckTool(),
+      outputSchema: factCheckReportSchema,
+      systemPrompt: buildSystemPrompt(channel),
+      userPrompt: buildUserPrompt(script, factPack, channel),
+      maxTokens: 4096,
     });
 
-    const toolUse = response.content.find((b) => b.type === 'tool_use');
-    if (toolUse?.type !== 'tool_use') {
-      throw new Error('FactChecker: model did not call the expected tool');
-    }
-
-    const parsed = factCheckReportSchema.safeParse(toolUse.input);
-    if (!parsed.success) {
-      throw new Error(`FactChecker: invalid output — ${parsed.error.toString()}`);
-    }
-
-    await markStageAwaitingApproval(runId, 'fact-check', parsed.data);
+    await markStageAwaitingApproval(runId, 'fact-check', report);
     logger.info('complete', {
-      verdict: parsed.data.verdict,
-      issues: parsed.data.issues.length,
-      sourcing: parsed.data.sourcing_score,
-      balance: parsed.data.balance_score,
+      verdict: report.verdict,
+      issues: report.issues.length,
+      sourcing: report.sourcing_score,
+      balance: report.balance_score,
     });
-    return parsed.data;
+    return report;
   } catch (err) {
     await markStageFailed(runId, 'fact-check', String(err));
     throw err;
@@ -130,54 +109,50 @@ ${sourcesText}
 Audit this script against the fact pack and channel bias rules. Return a complete fact-check report.`;
 }
 
-function factCheckTool(): Anthropic.Tool {
+function factCheckTool() {
   return {
-    name: TOOL_NAME,
-    description: 'Submit the completed fact-check and editorial audit report',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        verdict: {
-          type: 'string',
-          enum: ['pass', 'pass_with_warnings', 'fail'],
-          description: 'Overall verdict. fail = at least one critical issue.',
-        },
-        sourcing_score: {
-          type: 'number',
-          description: 'Fraction of factual lines with valid citations (0–1)',
-        },
-        balance_score: {
-          type: 'number',
-          description: 'Fraction of bias rules respected (0–1)',
-        },
-        issues: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              severity: {
-                type: 'string',
-                enum: ['critical', 'warning', 'info'],
-              },
-              scene: {
-                type: 'number',
-                description: 'Scene number where the issue occurs (if applicable)',
-              },
-              description: { type: 'string', description: 'Clear description of the issue' },
-              suggested_fix: {
-                type: 'string',
-                description: 'Optional: how to fix this issue',
-              },
+    type: 'object' as const,
+    properties: {
+      verdict: {
+        type: 'string',
+        enum: ['pass', 'pass_with_warnings', 'fail'],
+        description: 'Overall verdict. fail = at least one critical issue.',
+      },
+      sourcing_score: {
+        type: 'number',
+        description: 'Fraction of factual lines with valid citations (0–1)',
+      },
+      balance_score: {
+        type: 'number',
+        description: 'Fraction of bias rules respected (0–1)',
+      },
+      issues: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            severity: {
+              type: 'string',
+              enum: ['critical', 'warning', 'info'],
             },
-            required: ['severity', 'description'],
+            scene: {
+              type: 'number',
+              description: 'Scene number where the issue occurs (if applicable)',
+            },
+            description: { type: 'string', description: 'Clear description of the issue' },
+            suggested_fix: {
+              type: 'string',
+              description: 'Optional: how to fix this issue',
+            },
           },
-        },
-        summary: {
-          type: 'string',
-          description: 'One-paragraph editorial summary for the human reviewer',
+          required: ['severity', 'description'],
         },
       },
-      required: ['verdict', 'sourcing_score', 'balance_score', 'issues', 'summary'],
+      summary: {
+        type: 'string',
+        description: 'One-paragraph editorial summary for the human reviewer',
+      },
     },
+    required: ['verdict', 'sourcing_score', 'balance_score', 'issues', 'summary'],
   };
 }
