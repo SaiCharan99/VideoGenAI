@@ -1,10 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { type ChannelConfig } from '@videogenai/channels';
 import { type Brief, type FactPack, jargonListSchema, type JargonList } from '@videogenai/types';
 import { markStageRunning, upsertStage, markStageFailed } from '../db-ops.js';
+import { generateStructuredOutput } from '../llm.js';
 import { createLogger } from '../logger.js';
-
-const client = new Anthropic();
 
 const TOOL_NAME = 'submit_jargon';
 
@@ -19,40 +17,21 @@ export async function runJargonMiner(
   logger.info('starting', { facts: factPack.facts.length, sources: factPack.sources.length });
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-opus-4-7',
-      max_tokens: 4096,
-      system: [
-        {
-          type: 'text',
-          text: buildSystemPrompt(channel),
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      tools: [jargonTool()],
-      tool_choice: { type: 'tool', name: TOOL_NAME },
-      messages: [
-        {
-          role: 'user',
-          content: buildUserPrompt(brief, factPack, channel),
-        },
-      ],
+    const jargon = await generateStructuredOutput({
+      stageName: 'JargonMiner',
+      schemaName: TOOL_NAME,
+      schemaDescription: 'Submit the complete jargon guide for the scriptwriter',
+      jsonSchema: jargonTool(),
+      outputSchema: jargonListSchema,
+      systemPrompt: buildSystemPrompt(channel),
+      userPrompt: buildUserPrompt(brief, factPack, channel),
+      maxTokens: 4096,
     });
 
-    const toolUse = response.content.find((b) => b.type === 'tool_use');
-    if (toolUse?.type !== 'tool_use') {
-      throw new Error('JargonMiner: model did not call the expected tool');
-    }
-
-    const parsed = jargonListSchema.safeParse(toolUse.input);
-    if (!parsed.success) {
-      throw new Error(`JargonMiner: invalid output — ${parsed.error.toString()}`);
-    }
-
     // No approval gate — mark approved immediately so the scriptwriter can use the guide
-    await upsertStage(runId, 'jargon', 'approved', parsed.data);
-    logger.info('complete', { terms: parsed.data.terms.length });
-    return parsed.data;
+    await upsertStage(runId, 'jargon', 'approved', jargon);
+    logger.info('complete', { terms: jargon.terms.length });
+    return jargon;
   } catch (err) {
     await markStageFailed(runId, 'jargon', String(err));
     throw err;
@@ -96,33 +75,29 @@ ${sourceTitles}
 Identify all jargon terms in this material that the target audience needs defined. Return the complete jargon guide for the scriptwriter.`;
 }
 
-function jargonTool(): Anthropic.Tool {
+function jargonTool() {
   return {
-    name: TOOL_NAME,
-    description: 'Submit the complete jargon guide for the scriptwriter',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        terms: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              term: { type: 'string', description: 'The jargon term' },
-              definition: {
-                type: 'string',
-                description: 'Plain-language definition (1–2 sentences)',
-              },
-              historical_context: {
-                type: 'string',
-                description: 'Optional: brief historical background that helps understanding',
-              },
+    type: 'object' as const,
+    properties: {
+      terms: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            term: { type: 'string', description: 'The jargon term' },
+            definition: {
+              type: 'string',
+              description: 'Plain-language definition (1–2 sentences)',
             },
-            required: ['term', 'definition'],
+            historical_context: {
+              type: 'string',
+              description: 'Optional: brief historical background that helps understanding',
+            },
           },
+          required: ['term', 'definition'],
         },
       },
-      required: ['terms'],
     },
+    required: ['terms'],
   };
 }

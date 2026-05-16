@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { type ChannelConfig } from '@videogenai/channels';
 import {
   type Brief,
@@ -8,9 +7,8 @@ import {
   type Script,
 } from '@videogenai/types';
 import { markStageAwaitingApproval, markStageRunning } from '../db-ops.js';
+import { generateStructuredOutput } from '../llm.js';
 import { createLogger } from '../logger.js';
-
-const client = new Anthropic();
 
 const TOOL_NAME = 'submit_script';
 
@@ -25,39 +23,20 @@ export async function runScriptwriter(
   await markStageRunning(runId, 'script');
   logger.info('starting', { facts: factPack.facts.length, jargonTerms: jargon.terms.length });
 
-  const response = await client.messages.create({
-    model: 'claude-opus-4-7',
-    max_tokens: 8192,
-    system: [
-      {
-        type: 'text',
-        text: buildSystemPrompt(channel),
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    tools: [scriptTool()],
-    tool_choice: { type: 'tool', name: TOOL_NAME },
-    messages: [
-      {
-        role: 'user',
-        content: buildUserPrompt(brief, factPack, jargon, channel),
-      },
-    ],
+  const script = await generateStructuredOutput({
+    stageName: 'Scriptwriter',
+    schemaName: TOOL_NAME,
+    schemaDescription: 'Submit the completed video script',
+    jsonSchema: scriptTool(),
+    outputSchema: scriptSchema,
+    systemPrompt: buildSystemPrompt(channel),
+    userPrompt: buildUserPrompt(brief, factPack, jargon, channel),
+    maxTokens: 8192,
   });
-
-  const toolUse = response.content.find((b) => b.type === 'tool_use');
-  if (toolUse?.type !== 'tool_use') {
-    throw new Error('Scriptwriter: model did not call the expected tool');
-  }
-
-  const parsed = scriptSchema.safeParse(toolUse.input);
-  if (!parsed.success) {
-    throw new Error(`Scriptwriter: invalid output — ${parsed.error.toString()}`);
-  }
 
   // Enforce: any cited source_id must exist in the fact pack (empty arrays allowed for transitions)
   const validSourceIds = new Set(factPack.sources.map((s) => s.id));
-  const badLines = parsed.data.lines.filter((line) =>
+  const badLines = script.lines.filter((line) =>
     line.source_ids.some((id) => !validSourceIds.has(id)),
   );
 
@@ -68,13 +47,13 @@ export async function runScriptwriter(
     );
   }
 
-  await markStageAwaitingApproval(runId, 'script', parsed.data);
+  await markStageAwaitingApproval(runId, 'script', script);
   logger.info('complete', {
-    title: parsed.data.title,
-    lines: parsed.data.lines.length,
-    estimatedDuration: parsed.data.estimated_duration_seconds,
+    title: script.title,
+    lines: script.lines.length,
+    estimatedDuration: script.estimated_duration_seconds,
   });
-  return parsed.data;
+  return script;
 }
 
 function buildSystemPrompt(channel: ChannelConfig): string {
@@ -135,39 +114,34 @@ ${sourcesText}
 Write the complete video script. Every factual line must cite its source_ids. Define every jargon term inline on first use.`;
 }
 
-function scriptTool(): Anthropic.Tool {
+function scriptTool() {
   return {
-    name: TOOL_NAME,
-    description: 'Submit the completed video script',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        title: { type: 'string', description: 'YouTube video title (≤70 chars)' },
-        description: { type: 'string', description: 'YouTube description (2–3 sentences)' },
-        estimated_duration_seconds: { type: 'number' },
-        lines: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              scene: { type: 'number', description: 'Scene number (1-indexed)' },
-              text: { type: 'string', description: 'Narration text for this line' },
-              source_ids: {
-                type: 'array',
-                items: { type: 'string' },
-                description:
-                  'Source IDs that support this claim. Empty array for transitions/hooks.',
-              },
-              speaker_note: {
-                type: 'string',
-                description: 'Optional note to the voice actor (emphasis, pause, etc.)',
-              },
+    type: 'object' as const,
+    properties: {
+      title: { type: 'string', description: 'YouTube video title (≤70 chars)' },
+      description: { type: 'string', description: 'YouTube description (2–3 sentences)' },
+      estimated_duration_seconds: { type: 'number' },
+      lines: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            scene: { type: 'number', description: 'Scene number (1-indexed)' },
+            text: { type: 'string', description: 'Narration text for this line' },
+            source_ids: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Source IDs that support this claim. Empty array for transitions/hooks.',
             },
-            required: ['scene', 'text', 'source_ids'],
+            speaker_note: {
+              type: 'string',
+              description: 'Optional note to the voice actor (emphasis, pause, etc.)',
+            },
           },
+          required: ['scene', 'text', 'source_ids'],
         },
       },
-      required: ['title', 'description', 'estimated_duration_seconds', 'lines'],
     },
+    required: ['title', 'description', 'estimated_duration_seconds', 'lines'],
   };
 }
