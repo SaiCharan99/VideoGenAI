@@ -2031,7 +2031,9 @@ button {
   border-radius: 999px;
   border: 1.5px solid var(--br-2);
   overflow: hidden;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 .llm-seg--anthropic {
   border-color: rgba(217, 119, 87, 0.55);
@@ -2052,7 +2054,9 @@ button {
   font-family: var(--f-mono);
   font-size: 11px;
   color: var(--tx-4);
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   white-space: nowrap;
   line-height: 1;
 }
@@ -2155,7 +2159,9 @@ button {
   color: var(--tx-2);
   font-size: 13px;
   cursor: pointer;
-  transition: border-color 0.12s, color 0.12s;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
 }
 .llm-modal__cancel:hover:not(:disabled) {
   border-color: var(--br-3);
