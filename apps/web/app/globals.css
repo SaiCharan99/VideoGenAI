@@ -2024,38 +2024,61 @@ button {
   }
 }
 
-/* ─── LLM provider toggle ──────────────────────────────────────────────────── */
-.llm-toggle {
+/* ─── LLM provider segmented toggle ───────────────────────────────────────── */
+.llm-seg {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 9px;
   border-radius: 999px;
-  border: 1px solid var(--br-2);
+  border: 1.5px solid var(--br-2);
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.llm-seg--anthropic {
+  border-color: rgba(0, 229, 255, 0.45);
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.1);
+}
+.llm-seg--openai {
+  border-color: rgba(16, 163, 127, 0.5);
+  box-shadow: 0 0 0 1px rgba(16, 163, 127, 0.1);
+}
+.llm-seg__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border: none;
   background: transparent;
   cursor: pointer;
   font-family: var(--f-mono);
   font-size: 11px;
+  color: var(--tx-4);
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.llm-seg__opt:first-child {
+  border-right: 1px solid var(--br-2);
+}
+/* Active segment — Claude */
+.llm-seg--anthropic .llm-seg__opt:first-child {
+  background: rgba(0, 229, 255, 0.08);
+  color: var(--ac-active);
+  cursor: default;
+}
+/* Active segment — OpenAI */
+.llm-seg--openai .llm-seg__opt:last-child {
+  background: rgba(16, 163, 127, 0.1);
+  color: #10a37f;
+  cursor: default;
+}
+/* Hover on the inactive segment */
+.llm-seg--openai .llm-seg__opt:first-child:hover {
+  background: rgba(0, 229, 255, 0.06);
   color: var(--tx-2);
-  transition: border-color 0.15s, color 0.15s;
 }
-.llm-toggle:hover {
-  border-color: var(--br-3);
-  color: var(--tx-1);
-}
-.llm-toggle__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.llm-toggle--anthropic .llm-toggle__dot {
-  background: var(--ac-active);
-  box-shadow: 0 0 6px var(--ac-active);
-}
-.llm-toggle--openai .llm-toggle__dot {
-  background: #74c69d;
-  box-shadow: 0 0 6px #74c69d;
+.llm-seg--anthropic .llm-seg__opt:last-child:hover {
+  background: rgba(16, 163, 127, 0.06);
+  color: var(--tx-2);
 }
 
 /* ─── Confirmation modal ───────────────────────────────────────────────────── */
@@ -2076,12 +2099,28 @@ button {
   padding: 28px;
   width: 400px;
   box-shadow: var(--sh-pop);
+  transition: border-color 0.2s;
+}
+.llm-modal--anthropic {
+  border-color: rgba(0, 229, 255, 0.3);
+}
+.llm-modal--openai {
+  border-color: rgba(16, 163, 127, 0.3);
+}
+.llm-modal__icon {
+  margin-bottom: 14px;
+}
+.llm-modal--anthropic .llm-modal__icon {
+  color: var(--ac-active);
+}
+.llm-modal--openai .llm-modal__icon {
+  color: #10a37f;
 }
 .llm-modal__title {
   font-size: 14px;
   font-weight: 600;
   color: var(--tx-1);
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .llm-modal__body {
   font-size: 13px;
@@ -2145,7 +2184,7 @@ button {
   border-color: var(--ac-active);
 }
 .llm-modal__confirm--openai {
-  background: #74c69d;
-  color: #000;
-  border-color: #74c69d;
+  background: #10a37f;
+  color: #fff;
+  border-color: #10a37f;
 }
