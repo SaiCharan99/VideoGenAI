@@ -2038,8 +2038,8 @@ button {
   box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.12);
 }
 .llm-seg--openai {
-  border-color: rgba(16, 163, 127, 0.5);
-  box-shadow: 0 0 0 1px rgba(16, 163, 127, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 .llm-seg__opt {
   display: inline-flex;
@@ -2065,10 +2065,11 @@ button {
   color: #d97757;
   cursor: default;
 }
-/* Active segment — OpenAI */
+/* Active segment — OpenAI: ghost outline, no fill */
 .llm-seg--openai .llm-seg__opt:last-child {
-  background: rgba(16, 163, 127, 0.1);
-  color: #10a37f;
+  background: transparent;
+  color: var(--tx-1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   cursor: default;
 }
 /* Hover on the inactive segment */

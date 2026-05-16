@@ -4,14 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 
 type Provider = 'anthropic' | 'openai';
 
-const LABEL: Record<Provider, string> = { anthropic: 'Claude', openai: 'OpenAI' };
+const LABEL: Record<Provider, string> = { anthropic: 'Anthropic', openai: 'OpenAI' };
 
 /* ─── Brand icons ──────────────────────────────────────────────────────────── */
 
-function ClaudeIcon({ size = 13 }: { size?: number }) {
-  // Anthropic official logomark
+function AnthropicIcon({ size = 13 }: { size?: number }) {
+  // Anthropic official logomark — 46:32 wide mark, width scaled to preserve ratio
+  const w = Math.round(size * 1.4375);
   return (
-    <svg width={size} height={size} viewBox="0 0 46 32" fill="currentColor" aria-hidden="true">
+    <svg width={w} height={size} viewBox="0 0 46 32" fill="currentColor" aria-hidden="true">
       <path d="M32.73 0h-6.945L14.54 32h6.945l11.245-32zM18.58 0H11.635L0 32h7.006z" />
     </svg>
   );
@@ -79,10 +80,10 @@ export function LLMToggle() {
           className={`llm-seg__opt${provider === 'anthropic' ? ' llm-seg__opt--active' : ''}`}
           onClick={() => requestSwitch('anthropic')}
           aria-pressed={provider === 'anthropic'}
-          title="Use Claude (Anthropic)"
+          title="Use Anthropic"
         >
-          <ClaudeIcon />
-          <span>Claude</span>
+          <AnthropicIcon />
+          <span>Anthropic</span>
         </button>
         <button
           className={`llm-seg__opt${provider === 'openai' ? ' llm-seg__opt--active' : ''}`}
@@ -108,7 +109,7 @@ export function LLMToggle() {
         >
           <div className={`llm-modal llm-modal--${pending}`}>
             <div className="llm-modal__icon">
-              {pending === 'anthropic' ? <ClaudeIcon size={22} /> : <OpenAIIcon size={22} />}
+              {pending === 'anthropic' ? <AnthropicIcon size={22} /> : <OpenAIIcon size={22} />}
             </div>
             <div className="llm-modal__title" id="llm-modal-title">
               Switch to {LABEL[pending]}?
