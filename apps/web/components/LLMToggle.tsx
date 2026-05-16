@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 type Provider = 'anthropic' | 'openai';
 
@@ -94,48 +95,50 @@ export function LLMToggle() {
         </button>
       </div>
 
-      {/* Confirmation modal */}
-      {pending && (
-        <div
-          className="llm-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="llm-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) cancelSwitch();
-          }}
-        >
-          <div className={`llm-modal llm-modal--${pending}`}>
-            <div className="llm-modal__icon">
-              {pending === 'anthropic' ? <AnthropicIcon size={22} /> : <OpenAIIcon size={22} />}
+      {/* Confirmation modal — portalled to body to escape header backdrop-filter stacking context */}
+      {pending &&
+        createPortal(
+          <div
+            className="llm-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="llm-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) cancelSwitch();
+            }}
+          >
+            <div className={`llm-modal llm-modal--${pending}`}>
+              <div className="llm-modal__icon">
+                {pending === 'anthropic' ? <AnthropicIcon size={22} /> : <OpenAIIcon size={22} />}
+              </div>
+              <div className="llm-modal__title" id="llm-modal-title">
+                Switch to {LABEL[pending]}?
+              </div>
+              <div className="llm-modal__body">
+                <p>
+                  New pipeline runs will use <strong>{LABEL[pending]}</strong> instead of{' '}
+                  <strong>{LABEL[provider]}</strong>.
+                </p>
+                <p className="llm-modal__note">Runs already in progress are not affected.</p>
+              </div>
+              <div className="llm-modal__actions">
+                <button className="llm-modal__cancel" onClick={cancelSwitch} disabled={busy}>
+                  Cancel
+                </button>
+                <button
+                  className={`llm-modal__confirm llm-modal__confirm--${pending}`}
+                  onClick={() => {
+                    void confirmSwitch();
+                  }}
+                  disabled={busy}
+                >
+                  {busy ? 'Switching…' : `Switch to ${LABEL[pending]}`}
+                </button>
+              </div>
             </div>
-            <div className="llm-modal__title" id="llm-modal-title">
-              Switch to {LABEL[pending]}?
-            </div>
-            <div className="llm-modal__body">
-              <p>
-                New pipeline runs will use <strong>{LABEL[pending]}</strong> instead of{' '}
-                <strong>{LABEL[provider]}</strong>.
-              </p>
-              <p className="llm-modal__note">Runs already in progress are not affected.</p>
-            </div>
-            <div className="llm-modal__actions">
-              <button className="llm-modal__cancel" onClick={cancelSwitch} disabled={busy}>
-                Cancel
-              </button>
-              <button
-                className={`llm-modal__confirm llm-modal__confirm--${pending}`}
-                onClick={() => {
-                  void confirmSwitch();
-                }}
-                disabled={busy}
-              >
-                {busy ? 'Switching…' : `Switch to ${LABEL[pending]}`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
