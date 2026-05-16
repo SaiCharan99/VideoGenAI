@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 type Provider = 'anthropic' | 'openai';
@@ -36,12 +36,15 @@ export function LLMToggle() {
 
   useEffect(() => {
     fetch('/api/settings/llm')
-      .then((r) => r.json())
-      .then((d: { provider: Provider }) => {
-        setProvider(d.provider);
-        setLoaded(true);
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = (await r.json()) as { provider?: unknown };
+        if (d.provider === 'anthropic' || d.provider === 'openai') setProvider(d.provider);
       })
-      .catch(() => setLoaded(true));
+      .catch(() => {
+        /* keep default provider on error */
+      })
+      .finally(() => setLoaded(true));
   }, []);
 
   const requestSwitch = useCallback(
@@ -55,11 +58,14 @@ export function LLMToggle() {
     if (!pending || busy) return;
     setBusy(true);
     try {
-      await fetch('/api/settings/llm', {
+      const r = await fetch('/api/settings/llm', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider: pending }),
       });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = (await r.json()) as { provider?: unknown };
+      if (d.provider !== pending) throw new Error('Unexpected provider in response');
       setProvider(pending);
     } finally {
       setBusy(false);
@@ -68,6 +74,19 @@ export function LLMToggle() {
   }, [pending, busy]);
 
   const cancelSwitch = useCallback(() => setPending(null), []);
+
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  // Focus cancel button and handle Escape when modal opens
+  useEffect(() => {
+    if (!pending) return;
+    cancelRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') cancelSwitch();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pending, cancelSwitch]);
 
   if (!loaded) return null;
 
@@ -122,7 +141,12 @@ export function LLMToggle() {
                 <p className="llm-modal__note">Runs already in progress are not affected.</p>
               </div>
               <div className="llm-modal__actions">
-                <button className="llm-modal__cancel" onClick={cancelSwitch} disabled={busy}>
+                <button
+                  ref={cancelRef}
+                  className="llm-modal__cancel"
+                  onClick={cancelSwitch}
+                  disabled={busy}
+                >
                   Cancel
                 </button>
                 <button
