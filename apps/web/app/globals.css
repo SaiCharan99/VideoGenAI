@@ -2038,8 +2038,8 @@ button {
   box-shadow: 0 0 0 1px rgba(217, 119, 87, 0.12);
 }
 .llm-seg--openai {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .llm-seg__opt {
   display: inline-flex;
@@ -2065,11 +2065,10 @@ button {
   color: #d97757;
   cursor: default;
 }
-/* Active segment — OpenAI: ghost outline, no fill */
+/* Active segment — OpenAI: white ghost */
 .llm-seg--openai .llm-seg__opt:last-child {
   background: transparent;
-  color: var(--tx-1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  color: #ffffff;
   cursor: default;
 }
 /* Hover on the inactive segment */
@@ -2078,7 +2077,7 @@ button {
   color: var(--tx-2);
 }
 .llm-seg--anthropic .llm-seg__opt:last-child:hover {
-  background: rgba(16, 163, 127, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--tx-2);
 }
 
@@ -2106,7 +2105,7 @@ button {
   border-color: rgba(217, 119, 87, 0.35);
 }
 .llm-modal--openai {
-  border-color: rgba(16, 163, 127, 0.3);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 .llm-modal__icon {
   margin-bottom: 14px;
@@ -2115,7 +2114,7 @@ button {
   color: #d97757;
 }
 .llm-modal--openai .llm-modal__icon {
-  color: #10a37f;
+  color: #ffffff;
 }
 .llm-modal__title {
   font-size: 14px;
@@ -2185,7 +2184,7 @@ button {
   border-color: #d97757;
 }
 .llm-modal__confirm--openai {
-  background: #10a37f;
-  color: #fff;
-  border-color: #10a37f;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
 }
