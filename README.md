@@ -197,4 +197,4 @@ More channels added as YAML configs once the pipeline stabilizes.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Proprietary — all rights reserved.
