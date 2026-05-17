@@ -1,5 +1,6 @@
 import { loadChannel } from '@videogenai/channels';
 import { db, runs } from '@videogenai/db';
+import { type Brief, type FactPack, type Script } from '@videogenai/types';
 import { eq } from 'drizzle-orm';
 import { runBriefBuilder } from '../agents/brief-builder.js';
 import { runFactChecker } from '../agents/fact-checker.js';
@@ -9,6 +10,14 @@ import { runScriptwriter } from '../agents/scriptwriter.js';
 import { runStoryboarder } from '../agents/storyboarder.js';
 import { markStageFailed } from '../db-ops.js';
 import { inngest } from './client.js';
+
+interface StageResponseData {
+  runId: string;
+  stageId: string;
+  action: 'approved' | 'revise';
+  editedOutput?: unknown;
+  feedback?: string;
+}
 
 export const pipelineRun = inngest.createFunction(
   {
@@ -34,43 +43,69 @@ export const pipelineRun = inngest.createFunction(
       .where(eq(runs.id, runId));
 
     // ── Stage 1: Brief ──────────────────────────────────────────────────────
-    const brief = await step.run('stage/brief', async () => {
-      try {
-        return await runBriefBuilder(runId, inputText, channel);
-      } catch (err) {
-        await markStageFailed(runId, 'brief', String(err));
-        throw err;
-      }
-    });
+    let effectiveBrief!: Brief;
+    {
+      let feedback: string | undefined;
+      for (let attempt = 1; ; attempt++) {
+        const result = await step.run(`stage/brief/${attempt}`, async () => {
+          try {
+            return await runBriefBuilder(runId, inputText, channel, feedback);
+          } catch (err) {
+            await markStageFailed(runId, 'brief', String(err));
+            throw err;
+          }
+        });
 
-    const briefApproval = await step.waitForEvent('brief/approved', {
-      event: 'videogenai/stage.approved',
-      if: `event.data.runId == async.data.runId && async.data.stageId == 'brief'`,
-      timeout: '7d',
-    });
-    if (!briefApproval) throw new Error('brief stage approval timed out after 7 days');
+        const response = await step.waitForEvent(`brief/response/${attempt}`, {
+          event: 'videogenai/stage.response',
+          if: `event.data.runId == async.data.runId && async.data.stageId == 'brief'`,
+          timeout: '7d',
+        });
+        if (!response) throw new Error('brief stage timed out after 7 days');
+
+        const rd = response.data;
+        if (rd.action === 'approved') {
+          effectiveBrief = (rd.editedOutput ?? result) as Brief;
+          break;
+        }
+        feedback = rd.feedback;
+      }
+    }
 
     // ── Stage 2: Research ───────────────────────────────────────────────────
-    const factPack = await step.run('stage/research', async () => {
-      try {
-        return await runResearcher(runId, brief, channel);
-      } catch (err) {
-        await markStageFailed(runId, 'research', String(err));
-        throw err;
-      }
-    });
+    let effectiveFactPack!: FactPack;
+    {
+      let feedback: string | undefined;
+      for (let attempt = 1; ; attempt++) {
+        const result = await step.run(`stage/research/${attempt}`, async () => {
+          try {
+            return await runResearcher(runId, effectiveBrief, channel, feedback);
+          } catch (err) {
+            await markStageFailed(runId, 'research', String(err));
+            throw err;
+          }
+        });
 
-    const researchApproval = await step.waitForEvent('research/approved', {
-      event: 'videogenai/stage.approved',
-      if: `event.data.runId == async.data.runId && async.data.stageId == 'research'`,
-      timeout: '7d',
-    });
-    if (!researchApproval) throw new Error('research stage approval timed out after 7 days');
+        const response = await step.waitForEvent(`research/response/${attempt}`, {
+          event: 'videogenai/stage.response',
+          if: `event.data.runId == async.data.runId && async.data.stageId == 'research'`,
+          timeout: '7d',
+        });
+        if (!response) throw new Error('research stage timed out after 7 days');
+
+        const rd = response.data;
+        if (rd.action === 'approved') {
+          effectiveFactPack = (rd.editedOutput ?? result) as FactPack;
+          break;
+        }
+        feedback = rd.feedback;
+      }
+    }
 
     // ── Stage 3: Jargon (auto-approved, no gate) ────────────────────────────
-    const jargon = await step.run('stage/jargon', async () => {
+    const jargon = await step.run('stage/jargon/1', async () => {
       try {
-        return await runJargonMiner(runId, brief, factPack, channel);
+        return await runJargonMiner(runId, effectiveBrief, effectiveFactPack, channel);
       } catch (err) {
         await markStageFailed(runId, 'jargon', String(err));
         throw err;
@@ -78,51 +113,130 @@ export const pipelineRun = inngest.createFunction(
     });
 
     // ── Stage 4: Script ─────────────────────────────────────────────────────
-    const script = await step.run('stage/script', async () => {
-      try {
-        return await runScriptwriter(runId, brief, factPack, jargon, channel);
-      } catch (err) {
-        await markStageFailed(runId, 'script', String(err));
-        throw err;
-      }
-    });
+    let effectiveScript!: Script;
+    {
+      let feedback: string | undefined;
+      for (let attempt = 1; ; attempt++) {
+        const result = await step.run(`stage/script/${attempt}`, async () => {
+          try {
+            return await runScriptwriter(
+              runId,
+              effectiveBrief,
+              effectiveFactPack,
+              jargon,
+              channel,
+              feedback,
+            );
+          } catch (err) {
+            await markStageFailed(runId, 'script', String(err));
+            throw err;
+          }
+        });
 
-    const scriptApproval = await step.waitForEvent('script/approved', {
-      event: 'videogenai/stage.approved',
-      if: `event.data.runId == async.data.runId && async.data.stageId == 'script'`,
-      timeout: '7d',
-    });
-    if (!scriptApproval) throw new Error('script stage approval timed out after 7 days');
+        const response = await step.waitForEvent(`script/response/${attempt}`, {
+          event: 'videogenai/stage.response',
+          if: `event.data.runId == async.data.runId && async.data.stageId == 'script'`,
+          timeout: '7d',
+        });
+        if (!response) throw new Error('script stage timed out after 7 days');
+
+        const rd = response.data;
+        if (rd.action === 'approved') {
+          effectiveScript = (rd.editedOutput ?? result) as Script;
+          break;
+        }
+        feedback = rd.feedback;
+      }
+    }
 
     // ── Stage 5: Fact-check ─────────────────────────────────────────────────
-    const factCheckReport = await step.run('stage/fact-check', async () =>
-      runFactChecker(runId, script, factPack, channel),
-    );
+    let factCheckReport!: Awaited<ReturnType<typeof runFactChecker>>;
+    {
+      let feedback: string | undefined;
+      for (let attempt = 1; ; attempt++) {
+        const result = await step.run(`stage/fact-check/${attempt}`, async () => {
+          try {
+            return await runFactChecker(
+              runId,
+              effectiveScript,
+              effectiveFactPack,
+              channel,
+              feedback,
+            );
+          } catch (err) {
+            await markStageFailed(runId, 'fact-check', String(err));
+            throw err;
+          }
+        });
 
-    const factCheckApproval = await step.waitForEvent('fact-check/approved', {
-      event: 'videogenai/stage.approved',
-      if: `event.data.runId == async.data.runId && async.data.stageId == 'fact-check'`,
-      timeout: '7d',
-    });
-    if (!factCheckApproval) throw new Error('fact-check stage approval timed out after 7 days');
+        const response = await step.waitForEvent(`fact-check/response/${attempt}`, {
+          event: 'videogenai/stage.response',
+          if: `event.data.runId == async.data.runId && async.data.stageId == 'fact-check'`,
+          timeout: '7d',
+        });
+        if (!response) throw new Error('fact-check stage timed out after 7 days');
+
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        const rd = response.data as StageResponseData;
+        if (rd.action === 'approved') {
+          factCheckReport = result;
+          break;
+        }
+        feedback = rd.feedback;
+      }
+    }
 
     // ── Stage 6: Storyboard ─────────────────────────────────────────────────
-    const storyboard = await step.run('stage/storyboard', async () =>
-      runStoryboarder(runId, brief, script, jargon, channel),
-    );
+    let storyboard!: Awaited<ReturnType<typeof runStoryboarder>>;
+    {
+      let feedback: string | undefined;
+      for (let attempt = 1; ; attempt++) {
+        const result = await step.run(`stage/storyboard/${attempt}`, async () => {
+          try {
+            return await runStoryboarder(
+              runId,
+              effectiveBrief,
+              effectiveScript,
+              jargon,
+              channel,
+              feedback,
+            );
+          } catch (err) {
+            await markStageFailed(runId, 'storyboard', String(err));
+            throw err;
+          }
+        });
 
-    const storyboardApproval = await step.waitForEvent('storyboard/approved', {
-      event: 'videogenai/stage.approved',
-      if: `event.data.runId == async.data.runId && async.data.stageId == 'storyboard'`,
-      timeout: '7d',
-    });
-    if (!storyboardApproval) throw new Error('storyboard stage approval timed out after 7 days');
+        const response = await step.waitForEvent(`storyboard/response/${attempt}`, {
+          event: 'videogenai/stage.response',
+          if: `event.data.runId == async.data.runId && async.data.stageId == 'storyboard'`,
+          timeout: '7d',
+        });
+        if (!response) throw new Error('storyboard stage timed out after 7 days');
+
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        const rd = response.data as StageResponseData;
+        if (rd.action === 'approved') {
+          storyboard = result;
+          break;
+        }
+        feedback = rd.feedback;
+      }
+    }
 
     await db
       .update(runs)
       .set({ status: 'complete', updatedAt: new Date() })
       .where(eq(runs.id, runId));
 
-    return { runId, brief, factPack, jargon, script, factCheckReport, storyboard };
+    return {
+      runId,
+      brief: effectiveBrief,
+      factPack: effectiveFactPack,
+      jargon,
+      script: effectiveScript,
+      factCheckReport,
+      storyboard,
+    };
   },
 );

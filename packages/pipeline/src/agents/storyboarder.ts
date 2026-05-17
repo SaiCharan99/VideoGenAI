@@ -18,6 +18,7 @@ export async function runStoryboarder(
   script: Script,
   jargon: JargonList,
   channel: ChannelConfig,
+  feedbackContext?: string,
 ): Promise<Storyboard> {
   const logger = createLogger(runId, 'storyboard');
   await markStageRunning(runId, 'storyboard');
@@ -31,7 +32,7 @@ export async function runStoryboarder(
       jsonSchema: storyboardTool(),
       outputSchema: storyboardSchema,
       systemPrompt: buildSystemPrompt(channel),
-      userPrompt: buildUserPrompt(brief, script, jargon, channel),
+      userPrompt: buildUserPrompt(brief, script, jargon, channel, feedbackContext),
       maxTokens: 8192,
     });
 
@@ -91,6 +92,7 @@ function buildUserPrompt(
   script: Script,
   jargon: JargonList,
   channel: ChannelConfig,
+  feedbackContext?: string,
 ): string {
   const sceneGroups: Record<number, string[]> = {};
   for (const l of script.lines) {
@@ -119,7 +121,7 @@ ${scenesText}
 JARGON TERMS TO DEFINE ON-SCREEN:
 ${jargonText}
 
-Create a complete storyboard — one entry per scene number. The total duration_seconds across all scenes should sum to approximately ${script.estimated_duration_seconds}s.`;
+Create a complete storyboard — one entry per scene number. The total duration_seconds across all scenes should sum to approximately ${script.estimated_duration_seconds}s.${feedbackContext ? `\n\n---\nHUMAN REVIEWER FEEDBACK — address this in your response:\n${feedbackContext}` : ''}`;
 }
 
 function storyboardTool() {

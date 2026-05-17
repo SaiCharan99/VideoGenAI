@@ -18,6 +18,7 @@ export async function runScriptwriter(
   factPack: FactPack,
   jargon: JargonList,
   channel: ChannelConfig,
+  feedbackContext?: string,
 ): Promise<Script> {
   const logger = createLogger(runId, 'script');
   await markStageRunning(runId, 'script');
@@ -30,7 +31,7 @@ export async function runScriptwriter(
     jsonSchema: scriptTool(),
     outputSchema: scriptSchema,
     systemPrompt: buildSystemPrompt(channel),
-    userPrompt: buildUserPrompt(brief, factPack, jargon, channel),
+    userPrompt: buildUserPrompt(brief, factPack, jargon, channel, feedbackContext),
     maxTokens: 8192,
   });
 
@@ -84,6 +85,7 @@ function buildUserPrompt(
   factPack: FactPack,
   jargon: JargonList,
   channel: ChannelConfig,
+  feedbackContext?: string,
 ): string {
   const factsText = factPack.facts.map((f) => `[${f.source_ids.join(',')}] ${f.claim}`).join('\n');
   const sourcesText = factPack.sources
@@ -111,7 +113,7 @@ ${factsText}
 SOURCES:
 ${sourcesText}
 
-Write the complete video script. Every factual line must cite its source_ids. Define every jargon term inline on first use.`;
+Write the complete video script. Every factual line must cite its source_ids. Define every jargon term inline on first use.${feedbackContext ? `\n\n---\nHUMAN REVIEWER FEEDBACK — address this in your response:\n${feedbackContext}` : ''}`;
 }
 
 function scriptTool() {

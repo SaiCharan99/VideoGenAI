@@ -16,6 +16,7 @@ export async function runFactChecker(
   script: Script,
   factPack: FactPack,
   channel: ChannelConfig,
+  feedbackContext?: string,
 ): Promise<FactCheckReport> {
   const logger = createLogger(runId, 'fact-check');
   await markStageRunning(runId, 'fact-check');
@@ -29,7 +30,7 @@ export async function runFactChecker(
       jsonSchema: factCheckTool(),
       outputSchema: factCheckReportSchema,
       systemPrompt: buildSystemPrompt(channel),
-      userPrompt: buildUserPrompt(script, factPack, channel),
+      userPrompt: buildUserPrompt(script, factPack, channel, feedbackContext),
       maxTokens: 4096,
     });
 
@@ -70,7 +71,12 @@ Scoring:
 - verdict: 'pass' if no critical issues, 'pass_with_warnings' if only warnings/info, 'fail' if any critical issues`;
 }
 
-function buildUserPrompt(script: Script, factPack: FactPack, channel: ChannelConfig): string {
+function buildUserPrompt(
+  script: Script,
+  factPack: FactPack,
+  channel: ChannelConfig,
+  feedbackContext?: string,
+): string {
   const scriptLines = script.lines
     .map((l) => {
       const cites =
@@ -106,7 +112,7 @@ ${factsText}
 Sources (${factPack.sources.length}):
 ${sourcesText}
 
-Audit this script against the fact pack and channel bias rules. Return a complete fact-check report.`;
+Audit this script against the fact pack and channel bias rules. Return a complete fact-check report.${feedbackContext ? `\n\n---\nHUMAN REVIEWER FEEDBACK — address this in your response:\n${feedbackContext}` : ''}`;
 }
 
 function factCheckTool() {

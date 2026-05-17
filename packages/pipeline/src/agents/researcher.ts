@@ -11,6 +11,7 @@ export async function runResearcher(
   runId: string,
   brief: Brief,
   channel: ChannelConfig,
+  feedbackContext?: string,
 ): Promise<FactPack> {
   const logger = createLogger(runId, 'research');
   await markStageRunning(runId, 'research');
@@ -59,7 +60,7 @@ export async function runResearcher(
     jsonSchema: factPackTool(),
     outputSchema: factPackSchema,
     systemPrompt: buildSystemPrompt(channel),
-    userPrompt: `VIDEO BRIEF:\nAngle: ${brief.angle}\nMust cover: ${brief.must_cover.join(', ')}\nMust avoid: ${brief.must_avoid.join(', ')}\n\nSOURCES:\n${sourceContext}`,
+    userPrompt: `VIDEO BRIEF:\nAngle: ${brief.angle}\nMust cover: ${brief.must_cover.join(', ')}\nMust avoid: ${brief.must_avoid.join(', ')}\n\nSOURCES:\n${sourceContext}${feedbackContext ? `\n\n---\nHUMAN REVIEWER FEEDBACK — address this in your response:\n${feedbackContext}` : ''}`,
     maxTokens: 4096,
   });
 
