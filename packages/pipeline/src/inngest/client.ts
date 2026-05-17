@@ -5,12 +5,18 @@ export interface PipelineStartEvent {
   data: { runId: string; channelId: string; inputText: string };
 }
 
-export interface StageApprovedEvent {
-  name: 'videogenai/stage.approved';
-  data: { runId: string; stageId: string };
+export interface StageResponseEvent {
+  name: 'videogenai/stage.response';
+  data: {
+    runId: string;
+    stageId: string;
+    action: 'approved' | 'revise';
+    editedOutput?: unknown;
+    feedback?: string;
+  };
 }
 
-type VideoGenAIEvents = PipelineStartEvent | StageApprovedEvent;
+type VideoGenAIEvents = PipelineStartEvent | StageResponseEvent;
 
 export const inngest = new Inngest({
   id: 'videogenai',

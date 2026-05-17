@@ -10,6 +10,7 @@ export async function runBriefBuilder(
   runId: string,
   inputText: string,
   channel: ChannelConfig,
+  feedbackContext?: string,
 ): Promise<Brief> {
   const logger = createLogger(runId, 'brief');
   await markStageRunning(runId, 'brief');
@@ -22,7 +23,7 @@ export async function runBriefBuilder(
     jsonSchema: briefTool(),
     outputSchema: briefSchema,
     systemPrompt: buildSystemPrompt(channel),
-    userPrompt: `Video brief request: "${inputText}"\n\nIf the topic contains obvious typos or casing errors, silently correct them before building the brief.`,
+    userPrompt: `Video brief request: "${inputText}"\n\nIf the topic contains obvious typos or casing errors, silently correct them before building the brief.${feedbackContext ? `\n\n---\nHUMAN REVIEWER FEEDBACK — address this in your response:\n${feedbackContext}` : ''}`,
     maxTokens: 1024,
   });
 

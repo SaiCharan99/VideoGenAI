@@ -2224,6 +2224,11 @@ button {
   box-sizing: border-box;
   tab-size: 2;
 }
+.rev-textarea--feedback {
+  min-height: 120px;
+  font-family: var(--f-sans);
+  font-size: 13px;
+}
 .rev-error {
   padding: 8px 16px;
   background: var(--ac-bad-bg);

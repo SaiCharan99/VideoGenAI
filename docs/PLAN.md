@@ -63,28 +63,28 @@ _Inserted after Phase 4 because you can't iterate on script quality without the 
 - [ ] Verify all six stage outputs land in the DB and render correctly in the cockpit
 - [ ] Fix any agent-level bugs surfaced by real runs
 
-### 3.5-B: Wire dead UI buttons
+### ✅ 3.5-B: Wire dead UI buttons
 
-- [ ] **View raw JSON** — modal or slide-out showing raw `stage.output` as formatted JSON
-- [ ] **Copy output** — copy raw JSON to clipboard
-- [ ] **Open all sources** (research stage) — open each `source.url` in a new tab
+- [x] **View raw JSON** — modal or slide-out showing raw `stage.output` as formatted JSON
+- [x] **Copy output** — copy raw JSON to clipboard
+- [x] **Open all sources** (research stage) — open each `source.url` in a new tab
 
-### 3.5-C: Revision flow — Edit & Approve
+### ✅ 3.5-C: Revision flow — Edit & Approve
 
 The most impactful revision mode: user reads the AI output, makes corrections inline, approves the edited version.
 
-- [ ] `StageCard`: "Request revision" opens an inline editor showing the output as editable JSON textarea. Cancel / Approve with edits buttons replace the banner.
-- [ ] Approve endpoint (`POST /api/runs/[id]/stages/[stageId]/approve`): accept optional `editedOutput` in body; save to `stages.output` before marking approved; pass `editedOutput` in the Inngest event data.
-- [ ] Pipeline (`pipeline.ts`): after each `waitForEvent`, use `event.data.editedOutput ?? stepResult` so downstream stages receive the corrected output.
+- [x] `StageCard`: "Edit output" opens an inline JSON textarea editor. Cancel / Approve with edits buttons replace the banner.
+- [x] Approve endpoint (`POST /api/runs/[id]/stages/[stageId]/approve`): accept optional `editedOutput` in body; save to `stages.output` before marking approved; pass `editedOutput` in the Inngest event data.
+- [x] Pipeline (`pipeline.ts`): after each `waitForEvent`, use `event.data.editedOutput ?? stepResult` so downstream stages receive the corrected output.
 
-### 3.5-D: Revision flow — Re-run with feedback
+### ✅ 3.5-D: Revision flow — Re-run with feedback
 
 For larger changes where the model should regenerate, not the user type JSON.
 
-- [ ] `StageCard`: second action — "Re-run" opens a feedback textarea. Submit sends feedback to backend.
-- [ ] New endpoint `POST /api/runs/[id]/stages/[stageId]/revise` — saves feedback, sends `videogenai/stage.revise` Inngest event.
-- [ ] Pipeline: loop pattern using unique step IDs (`stage/brief/attempt-2`, etc.); each re-run injects the feedback string into the agent prompt; loops until `stage.approved` event received.
-- [ ] All six text-stage agent functions accept an optional `feedbackContext?: string` param.
+- [x] `StageCard`: "Re-run" button opens a feedback textarea; submit sends feedback to backend; stage transitions back to running.
+- [x] New endpoint `POST /api/runs/[id]/stages/[stageId]/revise` — marks stage running, sends `videogenai/stage.response` with `action: 'revise'`.
+- [x] Pipeline: loop pattern using unique step IDs (`stage/brief/1`, `stage/brief/2`, etc.); each iteration injects feedback into agent prompt; loops until `action === 'approved'`.
+- [x] All five gated agent functions accept `feedbackContext?: string` appended to their user prompt.
 
 **Exit criteria:** From the browser: start a run, watch stages 1–6 complete, edit the brief output, approve with edits, watch research use the edited brief. Re-run the script with feedback. Everything reflected in the DB.
 

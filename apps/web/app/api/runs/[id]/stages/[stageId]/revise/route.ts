@@ -1,0 +1,42 @@
+import { db, stages } from '@videogenai/db';
+import { inngest } from '@videogenai/pipeline';
+import { stageIdSchema } from '@videogenai/types';
+import { and, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string; stageId: string }> },
+) {
+  const { id: runId, stageId: rawStageId } = await params;
+
+  const parsed = stageIdSchema.safeParse(rawStageId);
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'invalid stageId' }, { status: 400 });
+  }
+  const stageId = parsed.data;
+
+  let feedback: string;
+  try {
+    const body = (await req.json()) as { feedback?: unknown };
+    if (typeof body.feedback !== 'string' || body.feedback.trim() === '') {
+      return NextResponse.json({ error: 'feedback is required' }, { status: 400 });
+    }
+    feedback = body.feedback.trim();
+  } catch {
+    return NextResponse.json({ error: 'invalid request body' }, { status: 400 });
+  }
+
+  // Mark stage as running — the pipeline will re-run the agent momentarily
+  await db
+    .update(stages)
+    .set({ status: 'running', updatedAt: new Date() })
+    .where(and(eq(stages.runId, runId), eq(stages.stageId, stageId)));
+
+  await inngest.send({
+    name: 'videogenai/stage.response',
+    data: { runId, stageId, action: 'revise', feedback },
+  });
+
+  return NextResponse.json({ ok: true });
+}

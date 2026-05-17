@@ -4,7 +4,16 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { OutputViewer } from './OutputViewer';
 import { relTime, STAGE_META } from '@/lib/stages';
-import { IcAlert, IcCheck, IcBrackets, IcCopy, IcExt, IcChev, IcX } from '@/components/ui/Icons';
+import {
+  IcAlert,
+  IcCheck,
+  IcBrackets,
+  IcCopy,
+  IcExt,
+  IcChev,
+  IcX,
+  IcRefresh,
+} from '@/components/ui/Icons';
 
 interface Stage {
   id: string;
@@ -91,9 +100,12 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
   );
   const [approving, setApproving] = useState(false);
   const [approveError, setApproveError] = useState('');
-  const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const [mode, setMode] = useState<'view' | 'edit' | 'revise'>('view');
   const [editJson, setEditJson] = useState('');
   const [editError, setEditError] = useState('');
+  const [reviseText, setReviseText] = useState('');
+  const [revising, setRevising] = useState(false);
+  const [reviseError, setReviseError] = useState('');
   const [copied, setCopied] = useState(false);
   const [jsonModal, setJsonModal] = useState(false);
 
@@ -132,14 +144,14 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
     }
   }
 
-  function handleStartRevision() {
+  function handleStartEdit() {
     setEditJson(JSON.stringify(stage.output, null, 2));
     setEditError('');
     setMode('edit');
     setOpen(true);
   }
 
-  function handleCancelRevision() {
+  function handleCancelEdit() {
     setMode('view');
     setEditError('');
   }
@@ -154,6 +166,45 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
       return;
     }
     await handleApprove(parsed);
+  }
+
+  function handleStartRevise() {
+    setReviseText('');
+    setReviseError('');
+    setMode('revise');
+    setOpen(true);
+  }
+
+  function handleCancelRevise() {
+    setMode('view');
+    setReviseError('');
+  }
+
+  async function handleSubmitRevise() {
+    if (!reviseText.trim()) {
+      setReviseError('Describe what to change before submitting.');
+      return;
+    }
+    setReviseError('');
+    setRevising(true);
+    try {
+      const res = await fetch(`/api/runs/${runId}/stages/${stage.stageId}/revise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback: reviseText.trim() }),
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: unknown };
+        setReviseError(typeof body.error === 'string' ? body.error : 'Revise request failed');
+        return;
+      }
+      setMode('view');
+      onApproved(); // triggers parent to refresh
+    } catch (err) {
+      setReviseError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setRevising(false);
+    }
   }
 
   async function handleCopy() {
@@ -209,7 +260,7 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
         </div>
       </div>
 
-      {/* Approval banner — hidden while in edit mode */}
+      {/* Approval banner — hidden while in edit/revise mode */}
       {isAwaiting && open && mode === 'view' && (
         <div className="approval-banner">
           <div className="ic">
@@ -217,16 +268,13 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
           </div>
           <div className="grow">
             <b>This stage is awaiting your approval.</b>
-            <small>
-              Approving emits{' '}
-              <code style={{ fontFamily: 'var(--f-mono)', color: 'var(--tx-2)' }}>
-                stage.approved
-              </code>{' '}
-              → the next stage starts automatically.
-            </small>
+            <small>Approve as-is, edit the JSON inline, or re-run the agent with feedback.</small>
           </div>
-          <button className="btn btn--sm btn--ghost" onClick={handleStartRevision}>
+          <button className="btn btn--sm btn--ghost" onClick={handleStartEdit}>
             Edit output
+          </button>
+          <button className="btn btn--sm btn--ghost" onClick={handleStartRevise}>
+            <IcRefresh size={12} /> Re-run
           </button>
           <button
             className="btn btn--approve btn--sm"
@@ -238,12 +286,12 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
         </div>
       )}
 
-      {/* Inline revision editor */}
+      {/* Inline JSON editor */}
       {isAwaiting && open && mode === 'edit' && (
         <div className="rev-editor">
           <div className="rev-editor__head">
             <span>Editing output JSON — approve when done</span>
-            <button className="btn btn--ghost btn--sm" onClick={handleCancelRevision}>
+            <button className="btn btn--ghost btn--sm" onClick={handleCancelEdit}>
               <IcX size={12} /> Cancel
             </button>
           </div>
@@ -261,6 +309,35 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
               onClick={() => void handleApproveWithEdits()}
             >
               <IcCheck size={12} /> {approving ? 'Saving…' : 'Approve with edits'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Re-run with feedback panel */}
+      {isAwaiting && open && mode === 'revise' && (
+        <div className="rev-editor">
+          <div className="rev-editor__head">
+            <span>Describe what to change — the agent will regenerate</span>
+            <button className="btn btn--ghost btn--sm" onClick={handleCancelRevise}>
+              <IcX size={12} /> Cancel
+            </button>
+          </div>
+          <textarea
+            className="rev-textarea rev-textarea--feedback"
+            placeholder="e.g. The angle is too broad. Focus specifically on the Senate vote and its economic impact. Add more sources from opposition viewpoints."
+            value={reviseText}
+            onChange={(e) => setReviseText(e.target.value)}
+            spellCheck
+          />
+          {reviseError && <div className="rev-error">{reviseError}</div>}
+          <div className="rev-editor__foot">
+            <button
+              className="btn btn--approve btn--sm"
+              disabled={revising || !reviseText.trim()}
+              onClick={() => void handleSubmitRevise()}
+            >
+              <IcRefresh size={12} /> {revising ? 'Submitting…' : 'Submit & re-run'}
             </button>
           </div>
         </div>
