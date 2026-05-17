@@ -85,8 +85,8 @@ flowchart TD
 
     subgraph LLM["LLM Layer"]
         SWITCH{Provider?}
-        ANTHROPIC[Claude claude-opus-4-7]
-        OPENAI[GPT-5.2 Codex]
+        ANTHROPIC[claude-opus-4-7]
+        OPENAI[gpt-5.2-codex]
         SWITCH --> ANTHROPIC
         SWITCH --> OPENAI
     end
@@ -197,4 +197,4 @@ More channels added as YAML configs once the pipeline stabilizes.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Proprietary — all rights reserved.

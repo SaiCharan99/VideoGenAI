@@ -85,7 +85,9 @@ function computeMetrics(stageId: string, output: unknown): [string, string | num
 }
 
 export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Props) {
-  const [open, setOpen] = useState(defaultOpen ?? stage.status === 'awaiting_approval');
+  const [open, setOpen] = useState(
+    defaultOpen ?? (stage.status === 'awaiting_approval' || stage.status === 'failed'),
+  );
   const [approving, setApproving] = useState(false);
   const [approveError, setApproveError] = useState('');
 

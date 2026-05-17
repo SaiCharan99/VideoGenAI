@@ -8,6 +8,13 @@
       "when": 1778640572306,
       "tag": "0000_abnormal_mantis",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778998316240,
+      "tag": "0001_outstanding_steel_serpent",
+      "breakpoints": true
     }
   ]
 }
