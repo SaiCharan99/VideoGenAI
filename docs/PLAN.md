@@ -1,6 +1,6 @@
 # Build Plan
 
-The elaborate phased plan. Each phase ends at a meaningful checkpoint where the system is usable in some form, even if incomplete. We do not build all stages in parallel — we build the text pipeline first because script quality is the foundation everything else rests on.
+The phased plan. Each phase ends at a meaningful checkpoint where the system is usable in some form, even if incomplete. Text pipeline first — script quality is the foundation everything else rests on.
 
 ## Guiding principles
 
@@ -11,116 +11,148 @@ The elaborate phased plan. Each phase ends at a meaningful checkpoint where the 
 5. **Spend tokens where judgment is needed, code where it isn't.** TTS calls and FFmpeg invocations don't need an LLM.
 6. **Iterate on text before pixels.** Bad script + great visuals = bad video. Great script + okay visuals = watchable video.
 
-## Phases
+---
 
-### Phase 0 — Foundations
+## ✅ Phase 0 — Foundations
 
-Establish the workspace, tooling, and conventions before any product code exists.
+pnpm workspace, strict TS, ESLint, Prettier, husky + commitlint, GitHub Actions CI, `.env.example`. Proprietary license (MIT removed).
 
-| #   | Commit                                                              | Purpose                           |
-| --- | ------------------------------------------------------------------- | --------------------------------- |
-| 1   | `chore: initialize pnpm workspace with strict TS, ESLint, Prettier` | Monorepo skeleton                 |
-| 2   | `chore: add husky + lint-staged + commitlint`                       | Enforce conventions automatically |
-| 3   | `chore: add .editorconfig, .gitignore, MIT license`                 | Hygiene                           |
-| 4   | `chore(ci): GitHub Actions for lint + typecheck on PRs`             | CI from day one                   |
-| 5   | `chore: add .env.example documenting required keys`                 | Document secrets                  |
+**Done.**
 
-**Exit criteria:** `pnpm install && pnpm typecheck && pnpm lint` all pass on an empty workspace.
+---
 
-### Phase 1 — Data and config
+## ✅ Phase 1 — Data and config
 
-The shape of state and channel behavior.
+Drizzle schema (runs, stages, assets) + Neon Postgres. Channel configs (aussie-politics, latest-tech) as static TypeScript registry (YAML kept as docs). Zod types package.
 
-| #   | Commit                                                                   | Purpose                                     |
-| --- | ------------------------------------------------------------------------ | ------------------------------------------- |
-| 6   | `feat(db): drizzle schema for runs, stages, assets + Neon http driver`   | Persistence layer                           |
-| 7   | `feat(channels): zod schema for channel config + aussie-politics + tech` | Multi-channel parameterization              |
-| 8   | `feat(types): shared types package for pipeline ↔ web`                   | One source of truth for cross-package types |
+**Done.** Migration applied. `uniqueIndex` on `(run_id, stage_id)` required for upsert — fixed.
 
-**Exit criteria:** A new YAML in `packages/channels/configs/` is parseable and typed end-to-end. `pnpm db:generate` produces a clean migration.
+---
 
-### Phase 2 — Pipeline core, text stages
+## ✅ Phase 2 — Pipeline core, text stages
 
-The brain of the system. No pixels yet.
+Inngest setup. Agents: brief-builder (1), researcher (2), scriptwriter (4). LLM abstraction layer with OpenAI / Anthropic provider toggle. Input normalisation (trim/whitespace collapse). Silent typo correction in brief prompt.
 
-| #   | Commit                                                             | Purpose                                      |
-| --- | ------------------------------------------------------------------ | -------------------------------------------- |
-| 9   | `feat(pipeline): Inngest setup, Stage interface, run orchestrator` | Pipeline runtime                             |
-| 10  | `feat(pipeline): stage 1 brief-builder agent`                      | One-liner → structured brief                 |
-| 11  | `feat(pipeline): stage 2 researcher with citation enforcement`     | Brief → fact pack with sources               |
-| 12  | `feat(pipeline): stage 4 scriptwriter with claim/source pairs`     | Fact pack → script with structural citations |
+**Done.** Env loading via `next.config.ts` DefinePlugin forwarding fixed — pipeline now resolves `OPENAI_API_KEY` correctly at runtime.
 
-**Exit criteria:** Run the pipeline against `aussie-politics` and one test brief; get a complete, sourced script back as JSON. No UI yet — invoke through the Inngest dev server.
+---
 
-### Phase 3 — The cockpit
+## ✅ Phase 3 — The cockpit (shell)
 
-Human-in-the-loop UI. No new pipeline capability — just exposure of what already exists.
+Next.js 15 App Router. Runs list, new-run form, run detail page, stage cards with output viewers. Stage approval flow wired to Inngest `waitForEvent`. LLM provider toggle (OpenAI ↔ Anthropic) in header with confirmation modal. Claude Code slash commands (add-stage, add-channel, db-migrate, run-status). README with full Mermaid pipeline diagram.
 
-| #   | Commit                                                      | Purpose                         |
-| --- | ----------------------------------------------------------- | ------------------------------- |
-| 13  | `feat(web): Next.js shell, runs list, new-run form`         | App skeleton                    |
-| 14  | `feat(web): run detail page with stage cards`               | View / edit / approve per stage |
-| 15  | `feat(web): wire stage approvals to Inngest waitForEvent`   | The approval gate               |
-| 16  | `feat(web): stage output viewers (markdown, JSON, sources)` | Polish                          |
+**Done.** Several footer buttons (View raw JSON, Copy, Open sources) exist in the UI but are not wired — addressed in Phase 3.5.
 
-**Exit criteria:** From the browser, kick off a new run, watch stages progress, edit stage outputs if needed, approve each one. Final output: a finished script.
+---
 
-### Phase 4 — Audit and storyboard
+## ✅ Phase 4 — Audit and storyboard
 
-The remaining text stages.
+Agents: jargon-miner (3), fact-checker (5), storyboarder (6). All six text-stage agents exist and are registered in the Inngest pipeline function.
 
-| #   | Commit                                                        | Purpose                                     |
-| --- | ------------------------------------------------------------- | ------------------------------------------- |
-| 17  | `feat(pipeline): stage 3 jargon miner`                        | Identify and define terms                   |
-| 18  | `feat(pipeline): stage 5 fact-checker + stage 6 storyboarder` | Bias/citation audit + per-scene visual plan |
+**Done.** End-to-end pipeline run (stages 1–6) pending first confirmation — env issues resolved as of this session.
 
-**Exit criteria:** Run produces a fully specced video as text: script + jargon definitions + per-scene visual plan + verified citations. Internally publishable.
+---
 
-### 🛑 Quality checkpoint
+## 🔄 Phase 3.5 — Cockpit completion + revision flow
 
-Stop here. Generate 5–10 scripts across both channels. Read them critically. If they are not at "I would publish this on YouTube" quality, no amount of rendering will fix it. Iterate on prompts, channel configs, source-balancing rules until the text output is genuinely good. Only then proceed.
+_Inserted after Phase 4 because you can't iterate on script quality without the ability to edit stage outputs._
 
-### Phase 5 — Render
+### 3.5-A: First verified e2e run
+
+- [ ] Confirm stages 1–6 complete successfully without errors
+- [ ] Verify all six stage outputs land in the DB and render correctly in the cockpit
+- [ ] Fix any agent-level bugs surfaced by real runs
+
+### 3.5-B: Wire dead UI buttons
+
+- [ ] **View raw JSON** — modal or slide-out showing raw `stage.output` as formatted JSON
+- [ ] **Copy output** — copy raw JSON to clipboard
+- [ ] **Open all sources** (research stage) — open each `source.url` in a new tab
+
+### 3.5-C: Revision flow — Edit & Approve
+
+The most impactful revision mode: user reads the AI output, makes corrections inline, approves the edited version.
+
+- [ ] `StageCard`: "Request revision" opens an inline editor showing the output as editable JSON textarea. Cancel / Approve with edits buttons replace the banner.
+- [ ] Approve endpoint (`POST /api/runs/[id]/stages/[stageId]/approve`): accept optional `editedOutput` in body; save to `stages.output` before marking approved; pass `editedOutput` in the Inngest event data.
+- [ ] Pipeline (`pipeline.ts`): after each `waitForEvent`, use `event.data.editedOutput ?? stepResult` so downstream stages receive the corrected output.
+
+### 3.5-D: Revision flow — Re-run with feedback
+
+For larger changes where the model should regenerate, not the user type JSON.
+
+- [ ] `StageCard`: second action — "Re-run" opens a feedback textarea. Submit sends feedback to backend.
+- [ ] New endpoint `POST /api/runs/[id]/stages/[stageId]/revise` — saves feedback, sends `videogenai/stage.revise` Inngest event.
+- [ ] Pipeline: loop pattern using unique step IDs (`stage/brief/attempt-2`, etc.); each re-run injects the feedback string into the agent prompt; loops until `stage.approved` event received.
+- [ ] All six text-stage agent functions accept an optional `feedbackContext?: string` param.
+
+**Exit criteria:** From the browser: start a run, watch stages 1–6 complete, edit the brief output, approve with edits, watch research use the edited brief. Re-run the script with feedback. Everything reflected in the DB.
+
+---
+
+## 🛑 Quality checkpoint
+
+**Stop here.** Generate 5–10 scripts across both channels. Read them critically. If they are not at "I would publish this on YouTube" quality, no amount of rendering will fix it. Iterate on prompts, channel configs, and source-balancing rules until the text output is genuinely good. Only then proceed to Phase 5.
+
+Specifically verify:
+
+- Brief angles are specific and non-generic
+- Research sources are credible and balanced per channel bias rules
+- Scripts have structural citations (every claim has a `source_id`)
+- Fact-checker correctly rejects unsourced claims
+- Storyboard scene plan is coherent and producible
+
+---
+
+## ⬜ Phase 5 — Render
 
 Pixels.
 
-| #   | Commit                                                            | Purpose                      |
-| --- | ----------------------------------------------------------------- | ---------------------------- |
-| 19  | `feat(remotion): kinetic-explainer composition template`          | Base visual template         |
-| 20  | `feat(remotion): channel-specific theming (politics, tech)`       | Per-channel visual style     |
-| 21  | `feat(pipeline): stage 7 asset generator (TTS, stock, generated)` | All assets fetched/generated |
-| 22  | `feat(pipeline): stage 8 assembler — Remotion render`             | First video output           |
+| #   | Task                                                                                                | Purpose                      |
+| --- | --------------------------------------------------------------------------------------------------- | ---------------------------- |
+| 1   | `packages/remotion` — kinetic-explainer composition template                                        | Base visual template         |
+| 2   | Channel-specific theming (politics: news aesthetic; tech: clean minimal)                            | Per-channel visual style     |
+| 3   | Stage 7: asset-generator agent (TTS via ElevenLabs, stock via Pexels, AI stills via Replicate/Flux) | All assets fetched/generated |
+| 4   | Stage 8: assembler agent — Remotion render trigger                                                  | First video output           |
+| 5   | Cockpit: asset preview (waveform, image thumbnails, clip thumbnails)                                | Review before render         |
 
 **Exit criteria:** End-to-end run produces a watchable MP4. Quality is okay but not great.
 
-### Phase 6 — QA and publish
+---
+
+## ⬜ Phase 6 — QA and publish
 
 The last mile.
 
-| #   | Commit                                                                   | Purpose                      |
-| --- | ------------------------------------------------------------------------ | ---------------------------- |
-| 23  | `feat(pipeline): stage 9 QA reviewer (vision model watches output)`      | Catches obvious issues       |
-| 24  | `feat(pipeline): stage 10 publisher (YouTube Data API)`                  | Upload with disclosure label |
-| 25  | `feat(web): publish-approval UI with thumbnail/title/description editor` | Human approves final publish |
+| #   | Task                                                                                       | Purpose                                                       |
+| --- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| 1   | Stage 9: QA reviewer (vision model watches rendered output frame-by-frame)                 | Catches obvious issues: wrong names, bad cuts, caption errors |
+| 2   | Stage 10: publisher (YouTube Data API v3 OAuth upload)                                     | Upload with AI-disclosure label                               |
+| 3   | Cockpit: publish-approval UI — thumbnail editor, title/description editor, schedule picker | Human approves final publish                                  |
 
 **Exit criteria:** Click "publish" in the cockpit, video lands on YouTube with AI-content disclosure, metadata correct.
 
+---
+
 ## Beyond Phase 6
 
-- Auto-approval graduation: per-channel, per-stage flags to skip the human gate once trust is earned.
-- Shorts variant: 9:16 cutdown from the same source.
-- Thumbnail generation.
-- A/B title testing.
-- Analytics feedback loop: feed retention/CTR back into the brief-builder for future runs.
-- Additional channels (the whole point — these should "just work").
+- **Auto-approval graduation** — per-channel, per-stage flags to skip human gate once trust is earned. Start with jargon (no editorial judgment needed), end with brief (always needs eyes).
+- **Shorts variant** — 9:16 cutdown from the same source material, auto-generated in Phase 5 render step.
+- **Thumbnail generation** — Flux prompt from storyboard first frame, A/B tested titles overlaid.
+- **Analytics feedback loop** — feed retention/CTR back into the brief-builder as channel performance context.
+- **Additional channels** — the whole point. New channel = new YAML. Should "just work" with zero pipeline code changes.
+- **Cost tracking** — per-run token/API cost ledger surfaced in cockpit.
+
+---
 
 ## Risks and mitigations
 
-| Risk                                    | Mitigation                                                                                                                                        |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hallucinated facts in news/politics     | Structural citations: every claim references a `source_id`. Fact-checker rejects unsourced claims.                                                |
-| Bias creep                              | Dedicated balance-check pass with config-driven source-balancing rules per channel.                                                               |
-| Visual uncanny valley                   | Avoid AI avatars entirely. Lean on kinetic typography, stock, real news clips. Use generated b-roll only when storyboard explicitly calls for it. |
-| Cost per video                          | Phase 2–4 are nearly free (just LLM calls). Phase 5+ adds TTS ($) and optional Veo b-roll ($$). Budget tracking added in Phase 5.                 |
-| YouTube ToS                             | AI-disclosure label baked into publisher. Human approval required before upload until trust is established.                                       |
-| Channel-specific code leaking into core | Code review checklist: any `if (channel === ...)` triggers a refactor-to-config conversation.                                                     |
+| Risk                                    | Mitigation                                                                                                                    |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Hallucinated facts in news/politics     | Structural citations: every claim references a `source_id`. Fact-checker rejects unsourced claims.                            |
+| Bias creep                              | Dedicated balance-check pass with config-driven source-balancing rules per channel.                                           |
+| Visual uncanny valley                   | Avoid AI avatars. Lean on kinetic typography, stock, real news clips. AI b-roll only when storyboard explicitly calls for it. |
+| Cost per video                          | Phases 2–4 nearly free (LLM calls only). Phase 5+ adds TTS ($) and optional AI video ($$). Budget tracking in Phase 5.        |
+| YouTube ToS                             | AI-disclosure label baked into publisher. Human approval required before upload until trust is established.                   |
+| Channel-specific code leaking into core | Code review: any `if (channel === ...)` triggers a refactor-to-config conversation.                                           |
+| LLM provider lock-in                    | Provider abstraction layer in `llm.ts` — toggle between OpenAI and Anthropic without touching agents.                         |
