@@ -99,10 +99,11 @@ export default function RunDetailPage() {
       setLoadError('');
       setData(next);
       if (selectedStageId === null) {
+        const failed = next.stages.find((s) => s.status === 'failed');
         const awaiting = next.stages.find((s) => s.status === 'awaiting_approval');
         const running = next.stages.find((s) => s.status === 'running');
         const lastApproved = [...next.stages].reverse().find((s) => s.status === 'approved');
-        const auto = awaiting ?? running ?? lastApproved ?? next.stages[0];
+        const auto = failed ?? awaiting ?? running ?? lastApproved ?? next.stages[0];
         if (auto) setSelectedStageId(auto.stageId);
       }
     } catch {
@@ -237,7 +238,37 @@ export default function RunDetailPage() {
       <div className="detail__grid">
         {/* Main column */}
         <div className="detail__main">
-          {stages.length === 0 && (
+          {stages.length === 0 && run.status === 'failed' && (
+            <div
+              style={{
+                padding: '20px 24px',
+                background: 'var(--ac-bad-bg)',
+                border: '1px solid var(--ac-bad-br)',
+                borderRadius: 'var(--r-3)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              <div style={{ color: 'var(--ac-bad)', fontWeight: 600, fontSize: 13 }}>
+                Pipeline failed before any stage started
+              </div>
+              <div style={{ color: 'var(--tx-2)', fontSize: 12, fontFamily: 'var(--f-mono)' }}>
+                The function threw before recording a stage. Check the Inngest dashboard for the
+                full error trace:{' '}
+                <a
+                  href="http://localhost:8288"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: 'var(--ac-bad)', textDecoration: 'underline' }}
+                >
+                  localhost:8288
+                </a>
+              </div>
+            </div>
+          )}
+
+          {stages.length === 0 && run.status !== 'failed' && (
             <div className="empty">
               <h3>Run is queued.</h3>
               <p>The brief stage will start in a moment.</p>

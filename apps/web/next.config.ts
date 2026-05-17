@@ -1,4 +1,14 @@
 import type { NextConfig } from 'next';
+import { loadEnvFile } from 'process';
+import { resolve } from 'path';
+
+// Load root .env so API keys defined there are available inside Next.js.
+// apps/web/.env.local only carries DATABASE_URL; all LLM/search keys live at repo root.
+try {
+  loadEnvFile(resolve(import.meta.dirname, '../../.env'));
+} catch {
+  // .env absent in CI — rely on actual environment variables
+}
 
 const nextConfig: NextConfig = {
   transpilePackages: [
