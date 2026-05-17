@@ -1,11 +1,12 @@
 import type { NextConfig } from 'next';
 import { loadEnvFile } from 'process';
-import { resolve } from 'path';
+import { join } from 'path';
 
 // Load root .env so API keys defined there are available inside Next.js.
 // apps/web/.env.local only carries DATABASE_URL; all LLM/search keys live at repo root.
+// process.cwd() is the monorepo root when running `pnpm dev` from there.
 try {
-  loadEnvFile(resolve(import.meta.dirname, '../../.env'));
+  loadEnvFile(join(process.cwd(), '.env'));
 } catch {
   // .env absent in CI — rely on actual environment variables
 }
