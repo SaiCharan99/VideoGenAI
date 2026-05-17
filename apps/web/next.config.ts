@@ -4,11 +4,15 @@ import { join } from 'path';
 
 // Load root .env so API keys defined there are available inside Next.js.
 // apps/web/.env.local only carries DATABASE_URL; all LLM/search keys live at repo root.
-// process.cwd() is the monorepo root when running `pnpm dev` from there.
-try {
-  loadEnvFile(join(process.cwd(), '.env'));
-} catch {
-  // .env absent in CI — rely on actual environment variables
+// When pnpm runs workspace scripts with -r, CWD is the package dir (apps/web),
+// so ../../.env reaches the monorepo root. The second try handles direct invocation.
+for (const rel of ['../../.env', '.env']) {
+  try {
+    loadEnvFile(join(process.cwd(), rel));
+    break;
+  } catch {
+    // try next path
+  }
 }
 
 const nextConfig: NextConfig = {
