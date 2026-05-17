@@ -2194,3 +2194,94 @@ button {
   color: #000000;
   border-color: #ffffff;
 }
+
+/* ── Revision editor ─────────────────────────────────────────── */
+.rev-editor {
+  border-bottom: 1px solid var(--br-2);
+}
+.rev-editor__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--br-1);
+  font-size: 12px;
+  color: var(--tx-3);
+}
+.rev-textarea {
+  display: block;
+  width: 100%;
+  min-height: 280px;
+  resize: vertical;
+  background: var(--bg-inset);
+  border: none;
+  outline: none;
+  padding: 14px 16px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--tx-1);
+  box-sizing: border-box;
+  tab-size: 2;
+}
+.rev-error {
+  padding: 8px 16px;
+  background: var(--ac-bad-bg);
+  border-top: 1px solid var(--ac-bad-br);
+  color: var(--ac-bad);
+  font-family: var(--f-mono);
+  font-size: 11px;
+}
+.rev-editor__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 16px;
+  border-top: 1px solid var(--br-1);
+}
+
+/* ── JSON modal ──────────────────────────────────────────────── */
+.json-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.json-modal {
+  background: #0d0d10;
+  border: 1px solid var(--br-3);
+  border-radius: 10px;
+  box-shadow: var(--sh-pop);
+  width: 720px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+}
+.json-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--br-2);
+  font-size: 12px;
+  color: var(--tx-2);
+  flex-shrink: 0;
+}
+.json-modal__body {
+  overflow: auto;
+  padding: 16px 18px;
+  flex: 1;
+}
+.json-modal__body pre {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--tx-1);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

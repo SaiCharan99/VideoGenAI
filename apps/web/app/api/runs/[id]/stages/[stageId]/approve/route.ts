@@ -5,7 +5,7 @@ import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string; stageId: string }> },
 ) {
   const { id: runId, stageId: rawStageId } = await params;
@@ -16,12 +16,36 @@ export async function POST(
   }
   const stageId = parsed.data;
 
-  await db
-    .update(stages)
-    .set({ status: 'approved', approvedAt: new Date(), approvedBy: 'human', updatedAt: new Date() })
-    .where(and(eq(stages.runId, runId), eq(stages.stageId, stageId)));
+  let editedOutput: unknown;
+  try {
+    const body = (await req.json()) as { editedOutput?: unknown };
+    editedOutput = body.editedOutput;
+  } catch {
+    // empty or non-JSON body — plain approval, no edits
+  }
 
-  await inngest.send({ name: 'videogenai/stage.approved', data: { runId, stageId } });
+  if (editedOutput !== undefined) {
+    await db
+      .update(stages)
+      .set({
+        output: editedOutput,
+        status: 'approved',
+        approvedAt: new Date(),
+        approvedBy: 'human',
+        updatedAt: new Date(),
+      })
+      .where(and(eq(stages.runId, runId), eq(stages.stageId, stageId)));
+  } else {
+    await db
+      .update(stages)
+      .set({ status: 'approved', approvedAt: new Date(), approvedBy: 'human', updatedAt: new Date() })
+      .where(and(eq(stages.runId, runId), eq(stages.stageId, stageId)));
+  }
+
+  await inngest.send({
+    name: 'videogenai/stage.approved',
+    data: { runId, stageId, editedOutput },
+  });
 
   return NextResponse.json({ ok: true });
 }

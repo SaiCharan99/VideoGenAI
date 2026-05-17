@@ -1,5 +1,6 @@
 import { loadChannel } from '@videogenai/channels';
 import { db, runs } from '@videogenai/db';
+import { type Brief, type FactPack, type Script } from '@videogenai/types';
 import { eq } from 'drizzle-orm';
 import { runBriefBuilder } from '../agents/brief-builder.js';
 import { runFactChecker } from '../agents/fact-checker.js';
@@ -9,6 +10,12 @@ import { runScriptwriter } from '../agents/scriptwriter.js';
 import { runStoryboarder } from '../agents/storyboarder.js';
 import { markStageFailed } from '../db-ops.js';
 import { inngest } from './client.js';
+
+interface ApprovalData {
+  runId: string;
+  stageId: string;
+  editedOutput?: unknown;
+}
 
 export const pipelineRun = inngest.createFunction(
   {
@@ -49,11 +56,13 @@ export const pipelineRun = inngest.createFunction(
       timeout: '7d',
     });
     if (!briefApproval) throw new Error('brief stage approval timed out after 7 days');
+    const effectiveBrief =
+      ((briefApproval.data as ApprovalData).editedOutput as Brief | undefined) ?? brief;
 
     // ── Stage 2: Research ───────────────────────────────────────────────────
     const factPack = await step.run('stage/research', async () => {
       try {
-        return await runResearcher(runId, brief, channel);
+        return await runResearcher(runId, effectiveBrief, channel);
       } catch (err) {
         await markStageFailed(runId, 'research', String(err));
         throw err;
@@ -66,11 +75,13 @@ export const pipelineRun = inngest.createFunction(
       timeout: '7d',
     });
     if (!researchApproval) throw new Error('research stage approval timed out after 7 days');
+    const effectiveFactPack =
+      ((researchApproval.data as ApprovalData).editedOutput as FactPack | undefined) ?? factPack;
 
     // ── Stage 3: Jargon (auto-approved, no gate) ────────────────────────────
     const jargon = await step.run('stage/jargon', async () => {
       try {
-        return await runJargonMiner(runId, brief, factPack, channel);
+        return await runJargonMiner(runId, effectiveBrief, effectiveFactPack, channel);
       } catch (err) {
         await markStageFailed(runId, 'jargon', String(err));
         throw err;
@@ -80,7 +91,7 @@ export const pipelineRun = inngest.createFunction(
     // ── Stage 4: Script ─────────────────────────────────────────────────────
     const script = await step.run('stage/script', async () => {
       try {
-        return await runScriptwriter(runId, brief, factPack, jargon, channel);
+        return await runScriptwriter(runId, effectiveBrief, effectiveFactPack, jargon, channel);
       } catch (err) {
         await markStageFailed(runId, 'script', String(err));
         throw err;
@@ -93,10 +104,12 @@ export const pipelineRun = inngest.createFunction(
       timeout: '7d',
     });
     if (!scriptApproval) throw new Error('script stage approval timed out after 7 days');
+    const effectiveScript =
+      ((scriptApproval.data as ApprovalData).editedOutput as Script | undefined) ?? script;
 
     // ── Stage 5: Fact-check ─────────────────────────────────────────────────
     const factCheckReport = await step.run('stage/fact-check', async () =>
-      runFactChecker(runId, script, factPack, channel),
+      runFactChecker(runId, effectiveScript, effectiveFactPack, channel),
     );
 
     const factCheckApproval = await step.waitForEvent('fact-check/approved', {
@@ -108,7 +121,7 @@ export const pipelineRun = inngest.createFunction(
 
     // ── Stage 6: Storyboard ─────────────────────────────────────────────────
     const storyboard = await step.run('stage/storyboard', async () =>
-      runStoryboarder(runId, brief, script, jargon, channel),
+      runStoryboarder(runId, effectiveBrief, effectiveScript, jargon, channel),
     );
 
     const storyboardApproval = await step.waitForEvent('storyboard/approved', {
@@ -123,6 +136,14 @@ export const pipelineRun = inngest.createFunction(
       .set({ status: 'complete', updatedAt: new Date() })
       .where(eq(runs.id, runId));
 
-    return { runId, brief, factPack, jargon, script, factCheckReport, storyboard };
+    return {
+      runId,
+      brief: effectiveBrief,
+      factPack: effectiveFactPack,
+      jargon,
+      script: effectiveScript,
+      factCheckReport,
+      storyboard,
+    };
   },
 );

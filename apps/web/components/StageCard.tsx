@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { OutputViewer } from './OutputViewer';
 import { relTime, STAGE_META } from '@/lib/stages';
-import { IcAlert, IcCheck, IcBrackets, IcCopy, IcExt, IcChev } from '@/components/ui/Icons';
+import { IcAlert, IcCheck, IcBrackets, IcCopy, IcExt, IcChev, IcX } from '@/components/ui/Icons';
 
 interface Stage {
   id: string;
@@ -90,6 +91,11 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
   );
   const [approving, setApproving] = useState(false);
   const [approveError, setApproveError] = useState('');
+  const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const [editJson, setEditJson] = useState('');
+  const [editError, setEditError] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [jsonModal, setJsonModal] = useState(false);
 
   useEffect(() => {
     if (defaultOpen) setOpen(true);
@@ -103,23 +109,68 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
     stage.approvedAt ??
     (['approved', 'complete', 'skipped', 'failed'].includes(stage.status) ? stage.updatedAt : null);
 
-  async function handleApprove() {
+  async function handleApprove(editedOutput?: unknown) {
     setApproveError('');
     setApproving(true);
     try {
       const res = await fetch(`/api/runs/${runId}/stages/${stage.stageId}/approve`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editedOutput !== undefined ? { editedOutput } : {}),
       });
       if (!res.ok) {
         const body = (await res.json()) as { error?: unknown };
         setApproveError(typeof body.error === 'string' ? body.error : 'Approval failed');
         return;
       }
+      setMode('view');
       onApproved();
     } catch (err) {
       setApproveError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setApproving(false);
+    }
+  }
+
+  function handleStartRevision() {
+    setEditJson(JSON.stringify(stage.output, null, 2));
+    setEditError('');
+    setMode('edit');
+    setOpen(true);
+  }
+
+  function handleCancelRevision() {
+    setMode('view');
+    setEditError('');
+  }
+
+  async function handleApproveWithEdits() {
+    setEditError('');
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(editJson);
+    } catch {
+      setEditError('Invalid JSON — fix the syntax before approving.');
+      return;
+    }
+    await handleApprove(parsed);
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(stage.output, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // clipboard not available
+    }
+  }
+
+  function handleOpenSources() {
+    const out = stage.output as { sources?: { url?: string }[] } | null;
+    const sources = out?.sources ?? [];
+    for (const s of sources) {
+      if (s.url) window.open(s.url, '_blank', 'noopener,noreferrer');
     }
   }
 
@@ -158,7 +209,8 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
         </div>
       </div>
 
-      {isAwaiting && open && (
+      {/* Approval banner — hidden while in edit mode */}
+      {isAwaiting && open && mode === 'view' && (
         <div className="approval-banner">
           <div className="ic">
             <IcAlert size={14} />
@@ -173,7 +225,9 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
               → the next stage starts automatically.
             </small>
           </div>
-          <button className="btn btn--sm btn--ghost">Request revision</button>
+          <button className="btn btn--sm btn--ghost" onClick={handleStartRevision}>
+            Edit output
+          </button>
           <button
             className="btn btn--approve btn--sm"
             disabled={approving}
@@ -181,6 +235,34 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
           >
             <IcCheck size={12} /> {approving ? 'Approving…' : 'Approve stage'}
           </button>
+        </div>
+      )}
+
+      {/* Inline revision editor */}
+      {isAwaiting && open && mode === 'edit' && (
+        <div className="rev-editor">
+          <div className="rev-editor__head">
+            <span>Editing output JSON — approve when done</span>
+            <button className="btn btn--ghost btn--sm" onClick={handleCancelRevision}>
+              <IcX size={12} /> Cancel
+            </button>
+          </div>
+          <textarea
+            className="rev-textarea"
+            value={editJson}
+            onChange={(e) => setEditJson(e.target.value)}
+            spellCheck={false}
+          />
+          {editError && <div className="rev-error">{editError}</div>}
+          <div className="rev-editor__foot">
+            <button
+              className="btn btn--approve btn--sm"
+              disabled={approving}
+              onClick={() => void handleApproveWithEdits()}
+            >
+              <IcCheck size={12} /> {approving ? 'Saving…' : 'Approve with edits'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -214,7 +296,8 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
         </div>
       )}
 
-      {open && (
+      {/* Output viewer — hidden while editing so user focuses on the JSON */}
+      {open && mode === 'view' && (
         <div className="scard__body">
           <OutputViewer output={stage.output} stageId={stage.stageId} />
         </div>
@@ -222,14 +305,14 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
 
       {open && (
         <div className="scard__foot">
-          <button className="btn btn--ghost btn--sm">
+          <button className="btn btn--ghost btn--sm" onClick={() => setJsonModal(true)}>
             <IcBrackets size={12} /> View raw JSON
           </button>
-          <button className="btn btn--ghost btn--sm">
-            <IcCopy size={12} /> Copy output
+          <button className="btn btn--ghost btn--sm" onClick={() => void handleCopy()}>
+            <IcCopy size={12} /> {copied ? 'Copied!' : 'Copy output'}
           </button>
           {stage.stageId === 'research' && (
-            <button className="btn btn--ghost btn--sm">
+            <button className="btn btn--ghost btn--sm" onClick={handleOpenSources}>
               <IcExt size={12} /> Open all sources
             </button>
           )}
@@ -241,6 +324,25 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
           )}
         </div>
       )}
+
+      {/* Full-screen JSON modal */}
+      {jsonModal &&
+        createPortal(
+          <div className="json-modal-overlay" onClick={() => setJsonModal(false)}>
+            <div className="json-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="json-modal__head">
+                <span>{label} · raw output</span>
+                <button className="btn btn--ghost btn--sm" onClick={() => setJsonModal(false)}>
+                  <IcX size={14} />
+                </button>
+              </div>
+              <div className="json-modal__body">
+                <pre>{JSON.stringify(stage.output, null, 2)}</pre>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
