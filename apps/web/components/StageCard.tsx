@@ -262,7 +262,7 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
 
       {/* Approval banner — hidden while in edit/revise mode */}
       {isAwaiting && open && mode === 'view' && (
-        <div className="approval-banner">
+        <div className="approval-banner" role="status">
           <div className="ic">
             <IcAlert size={14} />
           </div>
@@ -405,11 +405,27 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
       {/* Full-screen JSON modal */}
       {jsonModal &&
         createPortal(
-          <div className="json-modal-overlay" onClick={() => setJsonModal(false)}>
-            <div className="json-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="json-modal-overlay"
+            onClick={() => setJsonModal(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setJsonModal(false);
+            }}
+          >
+            <div
+              className="json-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${label} raw output`}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="json-modal__head">
                 <span>{label} · raw output</span>
-                <button className="btn btn--ghost btn--sm" onClick={() => setJsonModal(false)}>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  aria-label="Close"
+                  onClick={() => setJsonModal(false)}
+                >
                   <IcX size={14} />
                 </button>
               </div>

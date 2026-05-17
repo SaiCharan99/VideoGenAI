@@ -571,7 +571,7 @@ function OVFactCheck({ data }: { data: FactCheckData }) {
                     </span>
                     {issue.scene !== undefined && (
                       <span
-                        style={{ fontFamily: 'var(--f-mono)', fontSize: 10, color: 'var(--tx-4)' }}
+                        style={{ fontFamily: 'var(--f-mono)', fontSize: 10, color: 'var(--tx-3)' }}
                       >
                         scene {issue.scene}
                       </span>
@@ -678,7 +678,7 @@ function OVStoryboard({ data }: { data: StoryboardData }) {
                     <b style={{ color: 'var(--tx-1)', fontSize: 13 }}>
                       {String(s.scene ?? i + 1).padStart(2, '0')}
                     </b>
-                    <span style={{ color: 'var(--tx-4)', fontSize: 10 }}>
+                    <span style={{ color: 'var(--tx-3)', fontSize: 10 }}>
                       {s.duration_seconds ?? 0}s
                     </span>
                   </div>
