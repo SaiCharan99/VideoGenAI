@@ -42,7 +42,7 @@ interface OpenAiRequestBody {
   };
 }
 
-const DEFAULT_CODEX_MODEL = 'gpt-4o';
+const DEFAULT_CODEX_MODEL = 'gpt-5.4';
 const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-7';
 
 export async function generateStructuredOutput<T>(
@@ -60,7 +60,8 @@ async function generateRaw<T>(options: GenerateStructuredOptions<T>): Promise<un
   const provider = resolveProvider();
 
   if (provider === 'openai') {
-    const apiKey = process.env.OPENAI_API_KEY ?? process.env.CODEX_API_KEY;
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    const apiKey = process.env.OPENAI_API_KEY || process.env.CODEX_API_KEY;
     if (!apiKey) {
       throw new Error(
         `${options.stageName}: provider resolved to openai but neither OPENAI_API_KEY nor CODEX_API_KEY is set.`,
@@ -78,7 +79,8 @@ async function generateWithOpenAi<T>(
 ): Promise<unknown> {
   const reasoningEffort = process.env.CODEX_REASONING_EFFORT;
   const body: OpenAiRequestBody = {
-    model: process.env.CODEX_MODEL ?? process.env.OPENAI_MODEL ?? DEFAULT_CODEX_MODEL,
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    model: process.env.CODEX_MODEL || process.env.OPENAI_MODEL || DEFAULT_CODEX_MODEL,
     instructions: options.systemPrompt,
     input: options.userPrompt,
     max_output_tokens: options.maxTokens,
