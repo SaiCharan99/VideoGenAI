@@ -1,5 +1,14 @@
 import { relations } from 'drizzle-orm';
-import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  index,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 
 export const runStatusEnum = pgEnum('run_status', ['pending', 'running', 'complete', 'failed']);
 
@@ -66,7 +75,7 @@ export const stages = pgTable(
   },
   (t) => [
     index('stages_run_idx').on(t.runId),
-    index('stages_run_stage_idx').on(t.runId, t.stageId),
+    uniqueIndex('stages_run_stage_idx').on(t.runId, t.stageId),
   ],
 );
 
