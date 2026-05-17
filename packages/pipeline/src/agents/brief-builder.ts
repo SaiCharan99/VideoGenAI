@@ -22,7 +22,7 @@ export async function runBriefBuilder(
     jsonSchema: briefTool(),
     outputSchema: briefSchema,
     systemPrompt: buildSystemPrompt(channel),
-    userPrompt: `Video brief request: "${inputText}"`,
+    userPrompt: `Video brief request: "${inputText}"\n\nIf the topic contains obvious typos or casing errors, silently correct them before building the brief.`,
     maxTokens: 1024,
   });
 

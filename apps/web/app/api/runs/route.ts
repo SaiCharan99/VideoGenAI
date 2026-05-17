@@ -6,7 +6,11 @@ import { z } from 'zod';
 
 const createRunSchema = z.object({
   channelId: z.string().regex(/^[a-z0-9-]+$/),
-  inputText: z.string().min(10).max(500),
+  inputText: z
+    .string()
+    .min(10)
+    .max(500)
+    .transform((s) => s.trim().replace(/\s+/g, ' ')),
 });
 
 export async function GET() {
