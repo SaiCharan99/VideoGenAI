@@ -42,7 +42,7 @@ interface OpenAiRequestBody {
   };
 }
 
-const DEFAULT_CODEX_MODEL = 'gpt-5.2-codex';
+const DEFAULT_CODEX_MODEL = 'gpt-4o';
 const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-7';
 
 export async function generateStructuredOutput<T>(
@@ -60,7 +60,7 @@ async function generateRaw<T>(options: GenerateStructuredOptions<T>): Promise<un
   const provider = resolveProvider();
 
   if (provider === 'openai') {
-    const apiKey = process.env.CODEX_API_KEY ?? process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY ?? process.env.CODEX_API_KEY;
     if (!apiKey) {
       throw new Error(
         `${options.stageName}: provider resolved to openai but neither OPENAI_API_KEY nor CODEX_API_KEY is set.`,

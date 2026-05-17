@@ -36,7 +36,8 @@ const PIPELINE_KEYS = [
   'REPLICATE_API_TOKEN',
 ];
 for (const key of PIPELINE_KEYS) {
-  pipelineEnv[key] = process.env[key] ?? '';
+  const val = process.env[key];
+  if (val) pipelineEnv[key] = val; // only forward truthy values so ?? defaults in pipeline still apply
 }
 
 const nextConfig: NextConfig = {
