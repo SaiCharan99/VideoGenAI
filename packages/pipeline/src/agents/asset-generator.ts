@@ -4,6 +4,8 @@ import {
   type AssetManifest,
   type Script,
   type Storyboard,
+  scriptSchema,
+  storyboardSchema,
 } from '@videogenai/types';
 import { upsertStage, markStageRunning, markStageFailed } from '../db-ops.js';
 import { createLogger } from '../logger.js';
@@ -19,10 +21,14 @@ export async function runAssetGenerator(
   await markStageRunning(runId, 'assets');
 
   try {
+    // Validate inputs before any side effects
+    const validatedScript = scriptSchema.parse(script);
+    const validatedStoryboard = storyboardSchema.parse(storyboard);
+
     const assets: AssetManifest['assets'] = [];
 
     // ── TTS narration ────────────────────────────────────────────────────────
-    const narrationText = script.lines.map((l) => l.text).join(' ');
+    const narrationText = validatedScript.lines.map((l) => l.text).join(' ');
     let narration_url: string | undefined;
     try {
       narration_url = await generateTTS(runId, narrationText);
@@ -32,9 +38,9 @@ export async function runAssetGenerator(
     }
 
     // ── Per-scene media (parallel, best-effort) ──────────────────────────────
-    const stockScenes = storyboard.scenes.filter((s) => s.visual_kind === 'stock_broll');
-    const generatedScenes = storyboard.scenes.filter(
-      (s) => s.visual_kind === 'generated_still' || s.visual_kind === 'generated_clip',
+    const stockScenes = validatedStoryboard.scenes.filter((s) => s.visual_kind === 'stock_broll');
+    const generatedScenes = validatedStoryboard.scenes.filter(
+      (s) => s.visual_kind === 'generated_still',
     );
 
     const results = await Promise.allSettled([
@@ -95,7 +101,11 @@ export async function runAssetGenerator(
     });
     return manifest;
   } catch (err) {
-    await markStageFailed(runId, 'assets', String(err));
+    try {
+      await markStageFailed(runId, 'assets', String(err));
+    } catch (stageErr) {
+      logger.error('markStageFailed threw', { reason: String(stageErr) });
+    }
     throw err;
   }
 }
