@@ -116,6 +116,10 @@ export default function RunDetailPage() {
   }, [id]);
 
   useEffect(() => {
+    hasAutoSelected.current = false;
+  }, [id]);
+
+  useEffect(() => {
     void fetchData();
     const t = setInterval(() => void fetchData(), 4000);
     return () => clearInterval(t);
@@ -340,7 +344,7 @@ export default function RunDetailPage() {
               </div>
               <div className="swid__row">
                 <span className="k">Approved</span>
-                <span className="v">{approvedCount} / 10</span>
+                <span className="v">{approvedCount} / {LIVE_STAGES.length}</span>
               </div>
               {sourcesCount > 0 && (
                 <div className="swid__row">
