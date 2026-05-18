@@ -832,11 +832,21 @@ a.hdr__brand:hover svg {
   flex-shrink: 0;
   transition: background 0.3s;
 }
-.pipe-seg--done   { background: var(--ac-ok); }
-.pipe-seg--await  { background: var(--ac-approve); }
-.pipe-seg--run    { background: var(--ac-active); }
-.pipe-seg--failed { background: var(--ac-bad); }
-.pipe-seg--dim    { background: var(--br-2); }
+.pipe-seg--done {
+  background: var(--ac-ok);
+}
+.pipe-seg--await {
+  background: var(--ac-approve);
+}
+.pipe-seg--run {
+  background: var(--ac-active);
+}
+.pipe-seg--failed {
+  background: var(--ac-bad);
+}
+.pipe-seg--dim {
+  background: var(--br-2);
+}
 
 /* Current stage label */
 .run__cur {
@@ -848,8 +858,14 @@ a.hdr__brand:hover svg {
   white-space: nowrap;
   overflow: hidden;
 }
-.run__cur-idx { color: var(--tx-4); }
-.run__cur-name { color: var(--tx-2); overflow: hidden; text-overflow: ellipsis; }
+.run__cur-idx {
+  color: var(--tx-4);
+}
+.run__cur-name {
+  color: var(--tx-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Mini pipeline track */
 .track {
