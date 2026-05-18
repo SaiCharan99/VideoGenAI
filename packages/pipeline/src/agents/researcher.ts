@@ -72,15 +72,41 @@ export async function runResearcher(
     );
   }
 
-  // Verify source provenance: every source ID cited in facts must exist in the returned sources
+  // Verify source provenance and auto-heal: if a fact references a source the LLM forgot to
+  // include in its output sources array, add it from withText. Truly hallucinated IDs (not in
+  // withText at all) are stripped from those facts; facts with no remaining source_ids are dropped.
+  const contextById = new Map(withText.map((r) => [r.id, r]));
   const returnedSourceIds = new Set(factPack.sources.map((s) => s.id));
-  const phantomIds = factPack.facts
-    .flatMap((f) => f.source_ids)
-    .filter((id) => !returnedSourceIds.has(id));
+  const allCitedIds = new Set(factPack.facts.flatMap((f) => f.source_ids));
+  const phantomIds = [...allCitedIds].filter((id) => !returnedSourceIds.has(id));
+
   if (phantomIds.length > 0) {
-    throw new Error(
-      `Researcher: facts reference source IDs not in the returned source list: ${[...new Set(phantomIds)].join(', ')}`,
-    );
+    const truePhantoms = new Set<string>();
+    for (const id of phantomIds) {
+      const ctx = contextById.get(id);
+      if (ctx) {
+        factPack.sources.push({
+          id: ctx.id,
+          title: ctx.title,
+          url: ctx.url,
+          publication: '',
+          published_at: undefined,
+          excerpt: ctx.description,
+        });
+        returnedSourceIds.add(id);
+      } else {
+        truePhantoms.add(id);
+      }
+    }
+    if (truePhantoms.size > 0) {
+      for (const fact of factPack.facts) {
+        fact.source_ids = fact.source_ids.filter((id) => !truePhantoms.has(id));
+      }
+      factPack.facts = factPack.facts.filter((f) => f.source_ids.length > 0);
+      logger.warn('stripped truly hallucinated source IDs from facts', {
+        truePhantoms: [...truePhantoms],
+      });
+    }
   }
 
   await markStageAwaitingApproval(runId, 'research', factPack);

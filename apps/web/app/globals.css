@@ -812,6 +812,12 @@ a.hdr__brand:hover svg {
   color: var(--tx-1);
 }
 
+/* Wide runs grid — adds Pipeline + Current columns */
+.runs__head--wide,
+.run__row--wide {
+  grid-template-columns: 1.6fr 0.85fr 110px 148px 100px 80px 28px;
+}
+
 /* Mini pipeline track */
 .track {
   display: flex;
