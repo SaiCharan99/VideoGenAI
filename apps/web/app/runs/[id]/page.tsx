@@ -32,6 +32,7 @@ interface Run {
   channelId: string;
   inputText: string;
   status: string;
+  paused: boolean;
   createdAt: string;
 }
 
@@ -56,6 +57,7 @@ function stageNodeStatusLabel(status: string): string {
 }
 
 function pillClass(status: string): string {
+  if (status === 'paused') return 'pill pill--pending';
   if (status === 'running') return 'pill pill--running';
   if (status === 'awaiting_approval') return 'pill pill--approval';
   if (status === 'approved' || status === 'complete') return 'pill pill--ok';
@@ -87,6 +89,7 @@ export default function RunDetailPage() {
   const [data, setData] = useState<RunDetail | null>(null);
   const [loadError, setLoadError] = useState('');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const [pauseLoading, setPauseLoading] = useState(false);
   const hasAutoSelected = useRef(false);
 
   const fetchData = useCallback(async () => {
@@ -114,6 +117,17 @@ export default function RunDetailPage() {
       setLoadError('Failed to load run');
     }
   }, [id]);
+
+  const handlePauseResume = useCallback(async (currentlyPaused: boolean) => {
+    setPauseLoading(true);
+    try {
+      const action = currentlyPaused ? 'resume' : 'pause';
+      await fetch(`/api/runs/${id}/${action}`, { method: 'POST' });
+      await fetchData();
+    } finally {
+      setPauseLoading(false);
+    }
+  }, [id, fetchData]);
 
   useEffect(() => {
     hasAutoSelected.current = false;
@@ -156,7 +170,8 @@ export default function RunDetailPage() {
   const awaitingStage = stages.find((s) => s.status === 'awaiting_approval');
   const approvedCount = stages.filter((s) => s.status === 'approved' || s.status === 'complete').length;
 
-  const runDisplayStatus = isAwaiting ? 'awaiting_approval' : run.status;
+  const runDisplayStatus = run.paused ? 'paused' : isAwaiting ? 'awaiting_approval' : run.status;
+  const canPauseResume = run.status === 'running';
 
   const sourcesCount = (() => {
     const r = stages.find((s) => s.stageId === 'research');
@@ -213,6 +228,15 @@ export default function RunDetailPage() {
             </div>
           </div>
           <div className="detail__actions">
+            {canPauseResume && (
+              <button
+                className={run.paused ? 'btn btn--approve btn--sm' : 'btn btn--bad btn--sm'}
+                disabled={pauseLoading}
+                onClick={() => void handlePauseResume(run.paused)}
+              >
+                {run.paused ? '▶ Resume' : '⏸ Pause'}
+              </button>
+            )}
             <button className="btn btn--ghost btn--sm"><IcTerminal size={12} /> Open logs</button>
             <button className="btn btn--ghost btn--sm"><IcBrackets size={12} /> View JSON</button>
             <button className="btn btn--ghost btn--sm"><IcCopy size={12} /> Share</button>

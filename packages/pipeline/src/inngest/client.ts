@@ -15,7 +15,12 @@ export interface StageResponseEvent {
   };
 }
 
-type VideoGenAIEvents = PipelineStartEvent | StageResponseEvent;
+export interface RunResumedEvent {
+  name: 'videogenai/run.resumed';
+  data: { runId: string };
+}
+
+type VideoGenAIEvents = PipelineStartEvent | StageResponseEvent | RunResumedEvent;
 
 export const inngest = new Inngest({
   id: 'videogenai',
