@@ -16,8 +16,11 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'VideoGenAI Cockpit',
+  title: 'VGAI · Cockpit',
   description: 'Human-in-the-loop pipeline for AI-generated YouTube videos',
+  icons: {
+    icon: { url: '/favicon.svg', type: 'image/svg+xml' },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

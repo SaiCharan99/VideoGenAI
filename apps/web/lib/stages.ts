@@ -2,6 +2,7 @@ export interface StageMeta {
   id: string;
   label: string;
   hasApproval: boolean;
+  comingSoon?: boolean;
 }
 
 export const ALL_STAGES: StageMeta[] = [
@@ -11,11 +12,13 @@ export const ALL_STAGES: StageMeta[] = [
   { id: 'script', label: 'Script', hasApproval: true },
   { id: 'fact-check', label: 'Fact-check', hasApproval: true },
   { id: 'storyboard', label: 'Storyboard', hasApproval: true },
-  { id: 'assets', label: 'Assets', hasApproval: false },
-  { id: 'render', label: 'Render', hasApproval: false },
-  { id: 'qa', label: 'QA', hasApproval: false },
-  { id: 'publish', label: 'Publish', hasApproval: true },
+  { id: 'assets', label: 'Assets', hasApproval: false, comingSoon: true },
+  { id: 'render', label: 'Render', hasApproval: false, comingSoon: true },
+  { id: 'qa', label: 'QA', hasApproval: false, comingSoon: true },
+  { id: 'publish', label: 'Publish', hasApproval: true, comingSoon: true },
 ];
+
+export const LIVE_STAGES = ALL_STAGES.filter((s) => !s.comingSoon);
 
 export const STAGE_META = Object.fromEntries(ALL_STAGES.map((s) => [s.id, s])) as Record<
   string,

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { CHANNELS } from '@/lib/channels';
 import { IcRuns, IcChannels, IcPlus, IcSearch, IcSettings, IcChev } from '@/components/ui/Icons';
 import { LLMToggle } from '@/components/LLMToggle';
+import { VgaiIcon, VgaiWordmark } from '@/components/ui/VgaiIcon';
 
 function cls(...args: (string | boolean | undefined | null)[]) {
   return args.filter(Boolean).join(' ');
@@ -49,12 +50,17 @@ function Header() {
 
   return (
     <header className="hdr">
-      <div className="hdr__brand">
-        <div className="hdr__logo">VG</div>
+      <Link
+        href="/runs/new"
+        className="hdr__brand"
+        style={{ textDecoration: 'none', color: 'inherit' }}
+      >
+        <VgaiIcon variant="dark" animated height={28} />
         <div className="hdr__name">
-          VideoGenAI <span>/ cockpit</span>
+          <VgaiWordmark height={16} />
+          <span>/ cockpit</span>
         </div>
-      </div>
+      </Link>
       <div className="hdr__crumbs">{crumbs}</div>
       <div className="hdr__right">
         <LLMToggle />

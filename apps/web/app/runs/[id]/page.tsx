@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { StageCard } from '@/components/StageCard';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CHANNEL_MAP, fmtRange } from '@/lib/channels';
-import { ALL_STAGES, fmtDuration, relTime } from '@/lib/stages';
+import { ALL_STAGES, LIVE_STAGES, fmtDuration, relTime } from '@/lib/stages';
 import {
   IcTerminal, IcBrackets, IcCopy, IcAlert, IcArrowR, IcClock,
 } from '@/components/ui/Icons';
@@ -87,6 +87,7 @@ export default function RunDetailPage() {
   const [data, setData] = useState<RunDetail | null>(null);
   const [loadError, setLoadError] = useState('');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
+  const hasAutoSelected = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -98,24 +99,33 @@ export default function RunDetailPage() {
       const next = (await res.json()) as RunDetail;
       setLoadError('');
       setData(next);
-      if (selectedStageId === null) {
+      if (!hasAutoSelected.current) {
         const failed = next.stages.find((s) => s.status === 'failed');
         const awaiting = next.stages.find((s) => s.status === 'awaiting_approval');
         const running = next.stages.find((s) => s.status === 'running');
         const lastApproved = [...next.stages].reverse().find((s) => s.status === 'approved');
         const auto = failed ?? awaiting ?? running ?? lastApproved ?? next.stages[0];
-        if (auto) setSelectedStageId(auto.stageId);
+        if (auto) {
+          setSelectedStageId(auto.stageId);
+          hasAutoSelected.current = true;
+        }
       }
     } catch {
       setLoadError('Failed to load run');
     }
-  }, [id, selectedStageId]);
+  }, [id]);
 
   useEffect(() => {
     void fetchData();
     const t = setInterval(() => void fetchData(), 4000);
     return () => clearInterval(t);
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!selectedStageId) return;
+    const el = document.getElementById(`scard-${selectedStageId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [selectedStageId]);
 
   if (loadError) {
     return <p style={{ color: 'var(--ac-bad)', padding: 24, fontFamily: 'var(--f-mono)', fontSize: 12 }}>{loadError}</p>;
@@ -165,7 +175,7 @@ export default function RunDetailPage() {
     return typeof o.estimated_duration_seconds === 'number' ? o.estimated_duration_seconds : null;
   })();
 
-  const pendingCount = ALL_STAGES.filter((m) => !dbByStageId[m.id]).length;
+  const pendingCount = LIVE_STAGES.filter((m) => !dbByStageId[m.id]).length;
 
   return (
     <div className="page page--wide detail">
@@ -195,7 +205,7 @@ export default function RunDetailPage() {
               <span className="sep">·</span>
               <span>Created <b>{relTime(run.createdAt)}</b></span>
               <span className="sep">·</span>
-              <span><b>{approvedCount}</b> of <b>10</b> stages approved</span>
+              <span><b>{approvedCount}</b> of <b>{LIVE_STAGES.length}</b> stages approved</span>
             </div>
           </div>
           <div className="detail__actions">
@@ -211,23 +221,28 @@ export default function RunDetailPage() {
         {ALL_STAGES.map((meta, i) => {
           const db = dbByStageId[meta.id];
           const status = db?.status ?? 'pending';
-          const nodeCls = stageNodeCls(status);
+          const nodeCls = meta.comingSoon ? 'pending' : stageNodeCls(status);
+          const isClickable = !meta.comingSoon;
           return (
             <div
               key={meta.id}
-              className={cls('stage-node', nodeCls, selectedStageId === meta.id && 'selected')}
-              onClick={() => setSelectedStageId(meta.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
+              className={cls('stage-node', nodeCls, !meta.comingSoon && selectedStageId === meta.id && 'selected')}
+              style={meta.comingSoon ? { opacity: 0.35, cursor: 'default' } : undefined}
+              onClick={isClickable ? () => setSelectedStageId(meta.id) : undefined}
+              role={isClickable ? 'button' : undefined}
+              tabIndex={isClickable ? 0 : undefined}
+              title={meta.comingSoon ? 'Phase 5 — not yet built' : undefined}
+              onKeyDown={isClickable ? (e) => {
                 if (e.key === 'Enter' || e.key === ' ') setSelectedStageId(meta.id);
-              }}
+              } : undefined}
             >
               <div className="stage-node__top">
                 <span className="stage-node__idx">{String(i + 1).padStart(2, '0')}</span>
                 <span className="stage-node__name">{meta.label}</span>
               </div>
-              <span className="stage-node__status">{stageNodeStatusLabel(status)}</span>
+              <span className="stage-node__status">
+                {meta.comingSoon ? 'phase 5' : stageNodeStatusLabel(status)}
+              </span>
               <div className="stage-node__bar" />
             </div>
           );
@@ -278,14 +293,15 @@ export default function RunDetailPage() {
           {stages.map((stage, i) => {
             const metaIdx = ALL_STAGES.findIndex((m) => m.id === stage.stageId);
             return (
-              <StageCard
-                key={stage.id}
-                runId={run.id}
-                stage={stage}
-                index={metaIdx === -1 ? i : metaIdx}
-                defaultOpen={stage.stageId === selectedStageId}
-                onApproved={() => void fetchData()}
-              />
+              <div key={stage.id} id={`scard-${stage.stageId}`}>
+                <StageCard
+                  runId={run.id}
+                  stage={stage}
+                  index={metaIdx === -1 ? i : metaIdx}
+                  defaultOpen={stage.stageId === selectedStageId}
+                  onApproved={() => void fetchData()}
+                />
+              </div>
             );
           })}
 
