@@ -81,20 +81,24 @@ function Sidebar() {
     <nav className="side" aria-label="Primary">
       <div className="side__section">
         <div className="side__label">Workspace</div>
-        <Link href="/runs" className={cls('side__item', isRuns && 'active')}>
+        <Link
+          href="/runs"
+          className={cls('side__item', isRuns && 'active')}
+          aria-current={isRuns ? 'page' : undefined}
+        >
           <span className="ic">
             <IcRuns />
           </span>
           Runs
         </Link>
-        <span className="side__item disabled">
+        <span className="side__item disabled" aria-disabled="true">
           <span className="ic">
             <IcChannels />
           </span>
           Channels
           <span className="count">2</span>
         </span>
-        <span className="side__item disabled">
+        <span className="side__item disabled" aria-disabled="true">
           <span className="ic">
             <IcSettings />
           </span>
