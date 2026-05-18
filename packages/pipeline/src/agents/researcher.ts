@@ -31,13 +31,15 @@ export async function runResearcher(
     throw new Error('Researcher: all search queries failed — cannot proceed without sources');
   }
 
-  // Deduplicate by URL
+  // Deduplicate by URL and reassign sequential IDs (parallel searches each emit src_1–src_5)
   const seen = new Set<string>();
-  const unique = allResults.filter((r) => {
-    if (seen.has(r.url)) return false;
-    seen.add(r.url);
-    return true;
-  });
+  const unique = allResults
+    .filter((r) => {
+      if (seen.has(r.url)) return false;
+      seen.add(r.url);
+      return true;
+    })
+    .map((r, i) => ({ ...r, id: `src_${i + 1}` }));
 
   // Fetch page text for top results (cap at 8 to control cost)
   const top = unique.slice(0, 8);
@@ -64,30 +66,59 @@ export async function runResearcher(
     maxTokens: 4096,
   });
 
-  if (factPack.sources.length < channel.research.min_sources) {
-    throw new Error(
-      `Researcher: only ${factPack.sources.length} sources found, need at least ${channel.research.min_sources}`,
-    );
-  }
-
-  // Verify source provenance: every source ID cited in facts must exist in the returned sources
+  // Verify source provenance and auto-heal: if a fact references a source the LLM forgot to
+  // include in its output sources array, add it from withText. Truly hallucinated IDs (not in
+  // withText at all) are stripped from those facts; facts with no remaining source_ids are dropped.
+  const contextById = new Map(withText.map((r) => [r.id, r]));
   const returnedSourceIds = new Set(factPack.sources.map((s) => s.id));
-  const phantomIds = factPack.facts
-    .flatMap((f) => f.source_ids)
-    .filter((id) => !returnedSourceIds.has(id));
+  const allCitedIds = new Set(factPack.facts.flatMap((f) => f.source_ids));
+  const phantomIds = [...allCitedIds].filter((id) => !returnedSourceIds.has(id));
+
   if (phantomIds.length > 0) {
+    const truePhantoms = new Set<string>();
+    for (const id of phantomIds) {
+      const ctx = contextById.get(id);
+      if (ctx) {
+        factPack.sources.push({
+          id: ctx.id,
+          title: ctx.title,
+          url: ctx.url,
+          publication: '',
+          published_at: undefined,
+          excerpt: ctx.description,
+        });
+        returnedSourceIds.add(id);
+      } else {
+        truePhantoms.add(id);
+      }
+    }
+    if (truePhantoms.size > 0) {
+      for (const fact of factPack.facts) {
+        fact.source_ids = fact.source_ids.filter((id) => !truePhantoms.has(id));
+      }
+      factPack.facts = factPack.facts.filter((f) => f.source_ids.length > 0);
+      logger.warn('stripped truly hallucinated source IDs from facts', {
+        truePhantoms: [...truePhantoms],
+      });
+    }
+  }
+
+  // Validate after auto-heal (mutation may have changed sources/facts)
+  const validated = factPackSchema.parse(factPack);
+
+  if (validated.sources.length < channel.research.min_sources) {
     throw new Error(
-      `Researcher: facts reference source IDs not in the returned source list: ${[...new Set(phantomIds)].join(', ')}`,
+      `Researcher: only ${validated.sources.length} sources found, need at least ${channel.research.min_sources}`,
     );
   }
 
-  await markStageAwaitingApproval(runId, 'research', factPack);
+  await markStageAwaitingApproval(runId, 'research', validated);
   logger.info('complete', {
-    sources: factPack.sources.length,
-    facts: factPack.facts.length,
-    balancePassed: factPack.balance_check.passed,
+    sources: validated.sources.length,
+    facts: validated.facts.length,
+    balancePassed: validated.balance_check.passed,
   });
-  return factPack;
+  return validated;
 }
 
 function buildQueries(brief: Brief, channel: ChannelConfig): string[] {

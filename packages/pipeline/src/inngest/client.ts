@@ -6,10 +6,9 @@ export interface PipelineStartEvent {
 }
 
 export interface StageResponseEvent {
-  name: 'videogenai/stage.response';
+  name: `videogenai/stage.${string}.response`;
   data: {
     runId: string;
-    stageId: string;
     action: 'approved' | 'revise';
     editedOutput?: unknown;
     feedback?: string;

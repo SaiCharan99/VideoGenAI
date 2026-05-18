@@ -15,7 +15,13 @@ const createRunSchema = z.object({
 
 export async function GET() {
   const [allRuns, awaitingRows] = await Promise.all([
-    db.query.runs.findMany({ orderBy: [desc(runs.createdAt)], limit: 50 }),
+    db.query.runs.findMany({
+      orderBy: [desc(runs.createdAt)],
+      limit: 50,
+      with: {
+        stages: { columns: { stageId: true, status: true } },
+      },
+    }),
     db.select({ count: count() }).from(stages).where(eq(stages.status, 'awaiting_approval')),
   ]);
 

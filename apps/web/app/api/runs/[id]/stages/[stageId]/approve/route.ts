@@ -43,8 +43,8 @@ export async function POST(
   }
 
   await inngest.send({
-    name: 'videogenai/stage.response',
-    data: { runId, stageId, action: 'approved', editedOutput },
+    name: `videogenai/stage.${stageId}.response`,
+    data: { runId, action: 'approved', editedOutput },
   });
 
   return NextResponse.json({ ok: true });
