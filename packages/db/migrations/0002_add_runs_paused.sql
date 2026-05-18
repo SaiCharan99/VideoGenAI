@@ -1,0 +1,1 @@
+ALTER TABLE "runs" ADD COLUMN "paused" boolean DEFAULT false NOT NULL;

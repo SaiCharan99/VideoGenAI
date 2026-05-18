@@ -66,6 +66,21 @@ export const pipelineRun = inngest.createFunction(
       }
     }
 
+    // ── Pause gate ─────────────────────────────────────────────────────────
+    if (
+      await step.run('pause/check/before-research', () =>
+        db.query.runs
+          .findFirst({ where: eq(runs.id, runId), columns: { paused: true } })
+          .then((r) => r?.paused ?? false),
+      )
+    ) {
+      await step.waitForEvent('pause/wait/before-research', {
+        event: 'videogenai/run.resumed',
+        match: 'data.runId',
+        timeout: '14d',
+      });
+    }
+
     // ── Stage 2: Research ───────────────────────────────────────────────────
     let effectiveFactPack!: FactPack;
     {
@@ -96,6 +111,20 @@ export const pipelineRun = inngest.createFunction(
       }
     }
 
+    if (
+      await step.run('pause/check/before-jargon', () =>
+        db.query.runs
+          .findFirst({ where: eq(runs.id, runId), columns: { paused: true } })
+          .then((r) => r?.paused ?? false),
+      )
+    ) {
+      await step.waitForEvent('pause/wait/before-jargon', {
+        event: 'videogenai/run.resumed',
+        match: 'data.runId',
+        timeout: '14d',
+      });
+    }
+
     // ── Stage 3: Jargon (auto-approved, no gate) ────────────────────────────
     const jargon = await step.run('stage/jargon/1', async () => {
       try {
@@ -105,6 +134,20 @@ export const pipelineRun = inngest.createFunction(
         throw err;
       }
     });
+
+    if (
+      await step.run('pause/check/before-script', () =>
+        db.query.runs
+          .findFirst({ where: eq(runs.id, runId), columns: { paused: true } })
+          .then((r) => r?.paused ?? false),
+      )
+    ) {
+      await step.waitForEvent('pause/wait/before-script', {
+        event: 'videogenai/run.resumed',
+        match: 'data.runId',
+        timeout: '14d',
+      });
+    }
 
     // ── Stage 4: Script ─────────────────────────────────────────────────────
     let effectiveScript!: Script;
@@ -143,6 +186,20 @@ export const pipelineRun = inngest.createFunction(
       }
     }
 
+    if (
+      await step.run('pause/check/before-fact-check', () =>
+        db.query.runs
+          .findFirst({ where: eq(runs.id, runId), columns: { paused: true } })
+          .then((r) => r?.paused ?? false),
+      )
+    ) {
+      await step.waitForEvent('pause/wait/before-fact-check', {
+        event: 'videogenai/run.resumed',
+        match: 'data.runId',
+        timeout: '14d',
+      });
+    }
+
     // ── Stage 5: Fact-check ─────────────────────────────────────────────────
     let factCheckReport!: Awaited<ReturnType<typeof runFactChecker>>;
     {
@@ -177,6 +234,20 @@ export const pipelineRun = inngest.createFunction(
         }
         feedback = rd.feedback;
       }
+    }
+
+    if (
+      await step.run('pause/check/before-storyboard', () =>
+        db.query.runs
+          .findFirst({ where: eq(runs.id, runId), columns: { paused: true } })
+          .then((r) => r?.paused ?? false),
+      )
+    ) {
+      await step.waitForEvent('pause/wait/before-storyboard', {
+        event: 'videogenai/run.resumed',
+        match: 'data.runId',
+        timeout: '14d',
+      });
     }
 
     // ── Stage 6: Storyboard ─────────────────────────────────────────────────
@@ -216,6 +287,20 @@ export const pipelineRun = inngest.createFunction(
       }
     }
 
+    if (
+      await step.run('pause/check/before-assets', () =>
+        db.query.runs
+          .findFirst({ where: eq(runs.id, runId), columns: { paused: true } })
+          .then((r) => r?.paused ?? false),
+      )
+    ) {
+      await step.waitForEvent('pause/wait/before-assets', {
+        event: 'videogenai/run.resumed',
+        match: 'data.runId',
+        timeout: '14d',
+      });
+    }
+
     // ── Stage 7: Asset generation ───────────────────────────────────────────
     const assets = await step.run('stage/assets/1', async () => {
       try {
@@ -225,6 +310,20 @@ export const pipelineRun = inngest.createFunction(
         throw err;
       }
     });
+
+    if (
+      await step.run('pause/check/before-render', () =>
+        db.query.runs
+          .findFirst({ where: eq(runs.id, runId), columns: { paused: true } })
+          .then((r) => r?.paused ?? false),
+      )
+    ) {
+      await step.waitForEvent('pause/wait/before-render', {
+        event: 'videogenai/run.resumed',
+        match: 'data.runId',
+        timeout: '14d',
+      });
+    }
 
     // ── Stage 8: Assemble render manifest ───────────────────────────────────
     const renderResult = await step.run('stage/render/1', async () => {

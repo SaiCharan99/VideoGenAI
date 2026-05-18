@@ -741,6 +741,253 @@ function OVStoryboard({ data }: { data: StoryboardData }) {
   );
 }
 
+// ── Assets viewer ────────────────────────────────────────────────────────────
+
+interface AssetItem {
+  kind: string;
+  scene: number;
+  url: string;
+  provider?: string;
+  attribution?: string;
+  prompt?: string;
+  duration_seconds?: number;
+}
+interface AssetsData {
+  narration_url?: string;
+  assets?: AssetItem[];
+}
+function isAssets(v: unknown): v is AssetsData {
+  return typeof v === 'object' && v !== null && 'assets' in v;
+}
+
+const KIND_COLORS: Record<string, string> = {
+  stock_broll: '#ffb020',
+  generated_still: '#ff5470',
+  tts_audio: '#00e5ff',
+};
+
+function AssetThumb({ asset }: { asset: AssetItem }) {
+  const isVideo = asset.kind === 'stock_broll' && /\.(mp4|webm|mov)(\?|$)/i.test(asset.url);
+  const isImage = asset.kind === 'generated_still';
+
+  if (isVideo) {
+    return (
+      <video
+        className="asset-thumb"
+        src={asset.url}
+        muted
+        playsInline
+        preload="metadata"
+        onMouseEnter={(e) => void e.currentTarget.play()}
+        onMouseLeave={(e) => {
+          const v = e.currentTarget;
+          v.pause();
+          v.currentTime = 0;
+        }}
+      />
+    );
+  }
+  if (isImage) {
+    return <img className="asset-thumb" src={asset.url} alt={asset.prompt ?? 'generated still'} />;
+  }
+  return (
+    <div className="asset-thumb asset-thumb--placeholder">
+      <span>{asset.kind}</span>
+    </div>
+  );
+}
+
+function OVAssets({ data }: { data: AssetsData }) {
+  const assets = (data.assets ?? []).filter((a) => a.kind !== 'tts_audio');
+  const sceneAssets = [...assets].sort((a, b) => a.scene - b.scene);
+  const stockCount = assets.filter((a) => a.kind === 'stock_broll').length;
+  const generatedCount = assets.filter((a) => a.kind === 'generated_still').length;
+
+  return (
+    <div className="ov">
+      {/* Narration player */}
+      {data.narration_url && (
+        <div>
+          <div className="ov__h">
+            Narration <span className="line" />
+          </div>
+          <div className="narration-wrap">
+            <audio controls src={data.narration_url} className="narration-player" />
+          </div>
+        </div>
+      )}
+
+      {/* Summary */}
+      <div className="ov__kv">
+        <div>
+          <span className="k">Narration</span>
+          <span
+            className="v"
+            style={{ color: data.narration_url ? 'var(--ac-ok)' : 'var(--ac-bad)' }}
+          >
+            {data.narration_url ? 'ready' : 'missing'}
+          </span>
+        </div>
+        <div>
+          <span className="k">Total assets</span>
+          <span className="v">{assets.length}</span>
+        </div>
+        {stockCount > 0 && (
+          <div>
+            <span className="k">Stock clips</span>
+            <span className="v">{stockCount}</span>
+          </div>
+        )}
+        {generatedCount > 0 && (
+          <div>
+            <span className="k">AI stills</span>
+            <span className="v">{generatedCount}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Per-scene asset grid */}
+      {sceneAssets.length > 0 && (
+        <div>
+          <div className="ov__h">
+            Scene assets · {sceneAssets.length} <span className="line" />
+          </div>
+          <div className="asset-grid">
+            {sceneAssets.map((asset, i) => {
+              const kindColor = KIND_COLORS[asset.kind] ?? 'var(--tx-3)';
+              return (
+                <div key={i} className="asset-card">
+                  <AssetThumb asset={asset} />
+                  <div className="asset-card__meta">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span
+                        style={{
+                          fontFamily: 'var(--f-mono)',
+                          fontSize: 10,
+                          color: 'var(--tx-4)',
+                        }}
+                      >
+                        Scene {String(asset.scene).padStart(2, '0')}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: 'var(--f-mono)',
+                          fontSize: 9,
+                          color: kindColor,
+                          background: `color-mix(in srgb, ${kindColor} 12%, transparent)`,
+                          border: `1px solid color-mix(in srgb, ${kindColor} 30%, transparent)`,
+                          padding: '1px 5px',
+                          borderRadius: 3,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                        }}
+                      >
+                        {asset.kind.replace('_', ' ')}
+                      </span>
+                    </div>
+                    {asset.prompt && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: 'var(--tx-3)',
+                          lineHeight: 1.4,
+                          marginTop: 4,
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                        }}
+                      >
+                        {asset.prompt}
+                      </div>
+                    )}
+                    {asset.attribution && (
+                      <div style={{ fontSize: 10, color: 'var(--tx-4)', marginTop: 4 }}>
+                        {asset.attribution}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {assets.length === 0 && (
+        <div style={{ color: 'var(--tx-3)', fontSize: 13, padding: '8px 0' }}>
+          No scene assets fetched — check API keys (Pexels, Replicate).
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Render viewer ─────────────────────────────────────────────────────────────
+
+interface RenderData {
+  output_url?: string;
+  duration_seconds?: number;
+  width?: number;
+  height?: number;
+}
+function isRender(v: unknown): v is RenderData {
+  return typeof v === 'object' && v !== null && 'output_url' in v;
+}
+
+function OVRender({ data }: { data: RenderData }) {
+  return (
+    <div className="ov">
+      <div className="ov__h">
+        Render manifest <span className="line" />
+      </div>
+      <div className="ov__kv">
+        {data.width && data.height && (
+          <div>
+            <span className="k">Resolution</span>
+            <span className="v">
+              {data.width}×{data.height}
+            </span>
+          </div>
+        )}
+        {data.duration_seconds !== undefined && (
+          <div>
+            <span className="k">Duration</span>
+            <span className="v">{fmtDuration(Math.round(data.duration_seconds))}</span>
+          </div>
+        )}
+        {data.output_url && (
+          <div>
+            <span className="k">Output path</span>
+            <span className="v" style={{ fontFamily: 'var(--f-mono)', fontSize: 11 }}>
+              {data.output_url}
+            </span>
+          </div>
+        )}
+      </div>
+      {data.output_url && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: '12px 16px',
+            border: '1px dashed var(--br-2)',
+            borderRadius: 'var(--r-2)',
+            fontSize: 12,
+            color: 'var(--tx-3)',
+            lineHeight: 1.6,
+          }}
+        >
+          Render manifest written. Run{' '}
+          <code style={{ fontFamily: 'var(--f-mono)', color: 'var(--ac-cyan)' }}>
+            npx remotion render
+          </code>{' '}
+          with the manifest to produce the MP4.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OutputViewer({ output, stageId }: Props) {
   const [view, setView] = useState<'formatted' | 'json'>('formatted');
 
@@ -762,6 +1009,8 @@ export function OutputViewer({ output, stageId }: Props) {
     'jargon',
     'fact-check',
     'storyboard',
+    'assets',
+    'render',
   ]);
   const hasFormatted = FORMATTED_STAGES.has(stageId);
 
@@ -798,6 +1047,10 @@ export function OutputViewer({ output, stageId }: Props) {
         <OVFactCheck data={output} />
       ) : stageId === 'storyboard' && isStoryboard(output) ? (
         <OVStoryboard data={output} />
+      ) : stageId === 'assets' && isAssets(output) ? (
+        <OVAssets data={output} />
+      ) : stageId === 'render' && isRender(output) ? (
+        <OVRender data={output} />
       ) : (
         <JsonView data={output} />
       )}

@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import {
+  boolean,
   index,
   jsonb,
   pgEnum,
@@ -49,6 +50,7 @@ export const runs = pgTable(
     channelId: text('channel_id').notNull(),
     inputText: text('input_text').notNull(),
     status: runStatusEnum('status').notNull().default('pending'),
+    paused: boolean('paused').notNull().default(false),
     inngestRunId: text('inngest_run_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
