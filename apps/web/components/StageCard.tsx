@@ -122,6 +122,7 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
   const [reviseError, setReviseError] = useState('');
   const [copied, setCopied] = useState(false);
   const [jsonModal, setJsonModal] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     if (defaultOpen) setOpen(true);
@@ -228,6 +229,16 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
       setTimeout(() => setCopied(false), 1800);
     } catch {
       // clipboard not available
+    }
+  }
+
+  async function handleRetryAssets() {
+    setRetrying(true);
+    try {
+      await fetch(`/api/runs/${runId}/retry-assets`, { method: 'POST' });
+      onApproved();
+    } finally {
+      setRetrying(false);
     }
   }
 
@@ -405,6 +416,15 @@ export function StageCard({ runId, stage, index, defaultOpen, onApproved }: Prop
           {stage.stageId === 'research' && (
             <button className="btn btn--ghost btn--sm" onClick={handleOpenSources}>
               <IcExt size={12} /> Open all sources
+            </button>
+          )}
+          {stage.stageId === 'assets' && stage.status !== 'running' && (
+            <button
+              className="btn btn--ghost btn--sm"
+              disabled={retrying}
+              onClick={() => void handleRetryAssets()}
+            >
+              <IcRefresh size={12} /> {retrying ? 'Retrying…' : 'Retry assets'}
             </button>
           )}
           <div className="scard__foot-spacer" />
