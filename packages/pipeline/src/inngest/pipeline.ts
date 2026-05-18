@@ -2,6 +2,8 @@ import { loadChannel } from '@videogenai/channels';
 import { db, runs } from '@videogenai/db';
 import { type Brief, type FactPack, type Script } from '@videogenai/types';
 import { eq } from 'drizzle-orm';
+import { runAssetGenerator } from '../agents/asset-generator.js';
+import { runAssembler } from '../agents/assembler.js';
 import { runBriefBuilder } from '../agents/brief-builder.js';
 import { runFactChecker } from '../agents/fact-checker.js';
 import { runJargonMiner } from '../agents/jargon-miner.js';
@@ -214,6 +216,26 @@ export const pipelineRun = inngest.createFunction(
       }
     }
 
+    // ── Stage 7: Asset generation ───────────────────────────────────────────
+    const assets = await step.run('stage/assets/1', async () => {
+      try {
+        return await runAssetGenerator(runId, effectiveScript, storyboard, channel);
+      } catch (err) {
+        await markStageFailed(runId, 'assets', String(err));
+        throw err;
+      }
+    });
+
+    // ── Stage 8: Assemble render manifest ───────────────────────────────────
+    const renderResult = await step.run('stage/render/1', async () => {
+      try {
+        return await runAssembler(runId, effectiveScript, storyboard, assets, channel);
+      } catch (err) {
+        await markStageFailed(runId, 'render', String(err));
+        throw err;
+      }
+    });
+
     await db
       .update(runs)
       .set({ status: 'complete', updatedAt: new Date() })
@@ -227,6 +249,8 @@ export const pipelineRun = inngest.createFunction(
       script: effectiveScript,
       factCheckReport,
       storyboard,
+      assets,
+      renderResult,
     };
   },
 );

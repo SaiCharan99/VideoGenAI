@@ -96,3 +96,49 @@ export const storyboardSchema = z.object({
   scenes: z.array(storyboardSceneSchema),
 });
 export type Storyboard = z.infer<typeof storyboardSchema>;
+export type StoryboardScene = z.infer<typeof storyboardSceneSchema>;
+
+// ── Phase 5: Asset manifest ─────────────────────────────────────────────────
+
+export const ttsAssetSchema = z.object({
+  kind: z.literal('tts_audio'),
+  scene: z.number().int(),
+  url: z.string(),
+  duration_seconds: z.number().optional(),
+});
+
+export const stockBrollAssetSchema = z.object({
+  kind: z.literal('stock_broll'),
+  scene: z.number().int(),
+  url: z.string(),
+  provider: z.string(),
+  attribution: z.string().optional(),
+});
+
+export const generatedStillAssetSchema = z.object({
+  kind: z.literal('generated_still'),
+  scene: z.number().int(),
+  url: z.string(),
+  prompt: z.string(),
+});
+
+export const assetSchema = z.discriminatedUnion('kind', [
+  ttsAssetSchema,
+  stockBrollAssetSchema,
+  generatedStillAssetSchema,
+]);
+export type Asset = z.infer<typeof assetSchema>;
+
+export const assetManifestSchema = z.object({
+  narration_url: z.string().optional(),
+  assets: z.array(assetSchema),
+});
+export type AssetManifest = z.infer<typeof assetManifestSchema>;
+
+export const renderResultSchema = z.object({
+  output_url: z.string(),
+  duration_seconds: z.number(),
+  width: z.number(),
+  height: z.number(),
+});
+export type RenderResult = z.infer<typeof renderResultSchema>;

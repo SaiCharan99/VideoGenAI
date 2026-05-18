@@ -148,6 +148,28 @@ importers:
         specifier: ^1.19.4
         version: 1.19.4
 
+  packages/remotion:
+    dependencies:
+      '@remotion/player':
+        specifier: ^4.0.462
+        version: 4.0.462(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@videogenai/types':
+        specifier: workspace:*
+        version: link:../types
+      react:
+        specifier: ^19.1.0
+        version: 19.2.6
+      remotion:
+        specifier: ^4.0.462
+        version: 4.0.462(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.4
+        version: 19.2.14
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/types:
     dependencies:
       zod:
@@ -1479,6 +1501,12 @@ packages:
 
   '@protobufjs/utf8@1.1.1':
     resolution: {integrity: sha512-oOAWABowe8EAbMyWKM0tYDKi8Yaox52D+HWZhAIJqQXbqe0xI/GV7FhLWqlEKreMkfDjshR5FKgi3mnle0h6Eg==}
+
+  '@remotion/player@4.0.462':
+    resolution: {integrity: sha512-w/zBCWwLXsoNwsokaPwKxpdv+CBw52FuR3pQZegZvcnKwx1d8bq2P4xBjhCs+o5XP7kiRS0FQIIFYiCmXZXYgw==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   '@simple-libs/child-process-utils@1.0.2':
     resolution: {integrity: sha512-/4R8QKnd/8agJynkNdJmNw2MBxuFTRcNFnE5Sg/G+jkSsV8/UBgULMzhizWWW42p8L5H7flImV2ATi79Ove2Tw==}
@@ -2977,6 +3005,12 @@ packages:
 
   remark-rehype@11.1.2:
     resolution: {integrity: sha512-Dh7l57ianaEoIpzbp0PC9UKAdCSVklD8E5Rpw7ETfbTl3FqcOOgq5q2LVDhgGCkaBv7p24JXikPdvhhmHvKMsw==}
+
+  remotion@4.0.462:
+    resolution: {integrity: sha512-0bcwIiN7H0IcHtcDlfWHE2ho46RF0VmnVN1fAc26uMkonmAMMhqB+1aogfTE8eiYESEzFokh0lRc0t6pI8wzNA==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   require-directory@2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
@@ -4635,6 +4669,12 @@ snapshots:
 
   '@protobufjs/utf8@1.1.1': {}
 
+  '@remotion/player@4.0.462(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      remotion: 4.0.462(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+
   '@simple-libs/child-process-utils@1.0.2':
     dependencies:
       '@simple-libs/stream-utils': 1.2.0
@@ -6280,6 +6320,11 @@ snapshots:
       mdast-util-to-hast: 13.2.1
       unified: 11.0.5
       vfile: 6.0.3
+
+  remotion@4.0.462(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
+    dependencies:
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
 
   require-directory@2.1.1: {}
 

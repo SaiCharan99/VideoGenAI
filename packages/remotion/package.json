@@ -1,0 +1,26 @@
+{
+  "name": "@videogenai/remotion",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "preview": "remotion preview src/index.ts"
+  },
+  "dependencies": {
+    "@remotion/player": "^4.0.462",
+    "@videogenai/types": "workspace:*",
+    "react": "^19.1.0",
+    "remotion": "^4.0.462"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.4",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0"
+  }
+}
