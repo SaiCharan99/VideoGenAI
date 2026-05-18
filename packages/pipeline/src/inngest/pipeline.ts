@@ -11,14 +11,6 @@ import { runStoryboarder } from '../agents/storyboarder.js';
 import { markStageFailed } from '../db-ops.js';
 import { inngest } from './client.js';
 
-interface StageResponseData {
-  runId: string;
-  stageId: string;
-  action: 'approved' | 'revise';
-  editedOutput?: unknown;
-  feedback?: string;
-}
-
 export const pipelineRun = inngest.createFunction(
   {
     id: 'pipeline-run',
@@ -57,8 +49,8 @@ export const pipelineRun = inngest.createFunction(
         });
 
         const response = await step.waitForEvent(`brief/response/${attempt}`, {
-          event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && event.data.stageId == 'brief'`,
+          event: 'videogenai/stage.brief.response',
+          match: 'data.runId',
           timeout: '7d',
         });
         if (!response) throw new Error('brief stage timed out after 7 days');
@@ -87,8 +79,8 @@ export const pipelineRun = inngest.createFunction(
         });
 
         const response = await step.waitForEvent(`research/response/${attempt}`, {
-          event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && event.data.stageId == 'research'`,
+          event: 'videogenai/stage.research.response',
+          match: 'data.runId',
           timeout: '7d',
         });
         if (!response) throw new Error('research stage timed out after 7 days');
@@ -134,8 +126,8 @@ export const pipelineRun = inngest.createFunction(
         });
 
         const response = await step.waitForEvent(`script/response/${attempt}`, {
-          event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && event.data.stageId == 'script'`,
+          event: 'videogenai/stage.script.response',
+          match: 'data.runId',
           timeout: '7d',
         });
         if (!response) throw new Error('script stage timed out after 7 days');
@@ -170,14 +162,13 @@ export const pipelineRun = inngest.createFunction(
         });
 
         const response = await step.waitForEvent(`fact-check/response/${attempt}`, {
-          event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && event.data.stageId == 'fact-check'`,
+          event: 'videogenai/stage.fact-check.response',
+          match: 'data.runId',
           timeout: '7d',
         });
         if (!response) throw new Error('fact-check stage timed out after 7 days');
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-        const rd = response.data as StageResponseData;
+        const rd = response.data;
         if (rd.action === 'approved') {
           factCheckReport = result;
           break;
@@ -208,14 +199,13 @@ export const pipelineRun = inngest.createFunction(
         });
 
         const response = await step.waitForEvent(`storyboard/response/${attempt}`, {
-          event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && event.data.stageId == 'storyboard'`,
+          event: 'videogenai/stage.storyboard.response',
+          match: 'data.runId',
           timeout: '7d',
         });
         if (!response) throw new Error('storyboard stage timed out after 7 days');
 
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-        const rd = response.data as StageResponseData;
+        const rd = response.data;
         if (rd.action === 'approved') {
           storyboard = result;
           break;

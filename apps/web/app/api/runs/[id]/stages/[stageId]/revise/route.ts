@@ -34,8 +34,8 @@ export async function POST(
     .where(and(eq(stages.runId, runId), eq(stages.stageId, stageId)));
 
   await inngest.send({
-    name: 'videogenai/stage.response',
-    data: { runId, stageId, action: 'revise', feedback },
+    name: `videogenai/stage.${stageId}.response`,
+    data: { runId, action: 'revise', feedback },
   });
 
   return NextResponse.json({ ok: true });
