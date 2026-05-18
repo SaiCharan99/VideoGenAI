@@ -31,13 +31,15 @@ export async function runResearcher(
     throw new Error('Researcher: all search queries failed — cannot proceed without sources');
   }
 
-  // Deduplicate by URL
+  // Deduplicate by URL and reassign sequential IDs (parallel searches each emit src_1–src_5)
   const seen = new Set<string>();
-  const unique = allResults.filter((r) => {
-    if (seen.has(r.url)) return false;
-    seen.add(r.url);
-    return true;
-  });
+  const unique = allResults
+    .filter((r) => {
+      if (seen.has(r.url)) return false;
+      seen.add(r.url);
+      return true;
+    })
+    .map((r, i) => ({ ...r, id: `src_${i + 1}` }));
 
   // Fetch page text for top results (cap at 8 to control cost)
   const top = unique.slice(0, 8);

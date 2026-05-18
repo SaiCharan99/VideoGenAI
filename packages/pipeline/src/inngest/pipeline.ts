@@ -58,7 +58,7 @@ export const pipelineRun = inngest.createFunction(
 
         const response = await step.waitForEvent(`brief/response/${attempt}`, {
           event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && async.data.stageId == 'brief'`,
+          if: `event.data.runId == async.data.runId && event.data.stageId == 'brief'`,
           timeout: '7d',
         });
         if (!response) throw new Error('brief stage timed out after 7 days');
@@ -88,7 +88,7 @@ export const pipelineRun = inngest.createFunction(
 
         const response = await step.waitForEvent(`research/response/${attempt}`, {
           event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && async.data.stageId == 'research'`,
+          if: `event.data.runId == async.data.runId && event.data.stageId == 'research'`,
           timeout: '7d',
         });
         if (!response) throw new Error('research stage timed out after 7 days');
@@ -135,7 +135,7 @@ export const pipelineRun = inngest.createFunction(
 
         const response = await step.waitForEvent(`script/response/${attempt}`, {
           event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && async.data.stageId == 'script'`,
+          if: `event.data.runId == async.data.runId && event.data.stageId == 'script'`,
           timeout: '7d',
         });
         if (!response) throw new Error('script stage timed out after 7 days');
@@ -171,7 +171,7 @@ export const pipelineRun = inngest.createFunction(
 
         const response = await step.waitForEvent(`fact-check/response/${attempt}`, {
           event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && async.data.stageId == 'fact-check'`,
+          if: `event.data.runId == async.data.runId && event.data.stageId == 'fact-check'`,
           timeout: '7d',
         });
         if (!response) throw new Error('fact-check stage timed out after 7 days');
@@ -209,7 +209,7 @@ export const pipelineRun = inngest.createFunction(
 
         const response = await step.waitForEvent(`storyboard/response/${attempt}`, {
           event: 'videogenai/stage.response',
-          if: `event.data.runId == async.data.runId && async.data.stageId == 'storyboard'`,
+          if: `event.data.runId == async.data.runId && event.data.stageId == 'storyboard'`,
           timeout: '7d',
         });
         if (!response) throw new Error('storyboard stage timed out after 7 days');
