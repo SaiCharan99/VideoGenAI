@@ -91,6 +91,20 @@ function computeMetrics(stageId: string, output: unknown): [string, string | num
       ...(durLabel ? [['≈', durLabel] as [string, string]] : []),
     ];
   }
+  if (stageId === 'assets') {
+    const assetArr = Array.isArray(o.assets) ? (o.assets as { kind?: unknown }[]) : [];
+    const sceneAssets = assetArr.filter((a) => a.kind !== 'tts_audio');
+    return [
+      ['narration', o.narration_url ? 'ok' : 'missing'],
+      ['assets', sceneAssets.length],
+    ];
+  }
+  if (stageId === 'render') {
+    const dur = typeof o.duration_seconds === 'number' ? o.duration_seconds : null;
+    const durLabel =
+      dur !== null ? `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}` : null;
+    return durLabel ? [['duration', durLabel]] : null;
+  }
   return null;
 }
 
