@@ -25,10 +25,51 @@ interface RunsResponse {
   awaitingApproval: number;
 }
 
-type StatusFilter = 'all' | 'running' | 'complete' | 'failed' | 'pending';
+type StatusFilter = 'all' | 'running' | 'awaiting' | 'complete' | 'failed' | 'pending';
 
 function cls(...args: (string | boolean | undefined | null)[]) {
   return args.filter(Boolean).join(' ');
+}
+
+function segCls(stageId: string, byId: Record<string, string>): string {
+  const s = byId[stageId];
+  if (!s) return 'pipe-seg pipe-seg--dim';
+  if (s === 'approved' || s === 'complete') return 'pipe-seg pipe-seg--done';
+  if (s === 'awaiting_approval') return 'pipe-seg pipe-seg--await';
+  if (s === 'running') return 'pipe-seg pipe-seg--run';
+  if (s === 'failed') return 'pipe-seg pipe-seg--failed';
+  return 'pipe-seg pipe-seg--dim';
+}
+
+function PipelineBar({ stages }: { stages: StageSummary[] }) {
+  const byId = Object.fromEntries(stages.map((s) => [s.stageId, s.status]));
+  return (
+    <div className="pipe-bar">
+      {ALL_STAGES.map((meta) => (
+        <div
+          key={meta.id}
+          className={segCls(meta.id, byId)}
+          title={`${meta.label}: ${byId[meta.id] ?? 'pending'}`}
+          style={meta.comingSoon ? { opacity: 0.3 } : undefined}
+        />
+      ))}
+    </div>
+  );
+}
+
+function currentStage(stages: StageSummary[]): { idx: number; name: string } | null {
+  const active = stages.find(
+    (s) => s.status === 'running' || s.status === 'awaiting_approval' || s.status === 'failed',
+  );
+  const ref = active ?? [...stages].reverse().find((s) => s.status === 'approved' || s.status === 'complete');
+  if (!ref) return null;
+  const idx = ALL_STAGES.findIndex((m) => m.id === ref.stageId);
+  return { idx: idx + 1, name: ref.stageId };
+}
+
+function displayStatus(run: Run): string {
+  if (run.stages.some((s) => s.status === 'awaiting_approval')) return 'awaiting_approval';
+  return run.status;
 }
 
 function pillClass(status: string): string {
@@ -44,59 +85,22 @@ function pillLabel(status: string): string {
   return status;
 }
 
-function segColor(status: string): string {
-  if (status === 'approved' || status === 'complete') return 'var(--ac-ok)';
-  if (status === 'awaiting_approval') return 'var(--ac-approve)';
-  if (status === 'running') return 'var(--ac-active)';
-  if (status === 'failed') return 'var(--ac-bad)';
-  return 'var(--br-2)';
-}
-
-function PipelineBar({ stages }: { stages: StageSummary[]; runStatus: string }) {
-  const byId = Object.fromEntries(stages.map((s) => [s.stageId, s.status]));
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-      {ALL_STAGES.map((meta) => {
-        const status = byId[meta.id] ?? 'pending';
-        return (
-          <div
-            key={meta.id}
-            title={`${meta.label}: ${status}`}
-            style={{
-              width: meta.comingSoon ? 6 : 9,
-              height: meta.comingSoon ? 6 : 10,
-              borderRadius: 2,
-              flexShrink: 0,
-              background: segColor(status),
-              opacity: meta.comingSoon ? 0.35 : 1,
-              transition: 'background 0.3s',
-            }}
-          />
-        );
-      })}
-    </div>
+function oldestAwaitingAge(runs: Run[]): string | null {
+  const awaiting = runs.flatMap((r) =>
+    r.stages.filter((s) => s.status === 'awaiting_approval'),
   );
-}
-
-function currentStage(stages: StageSummary[], runStatus: string): string | null {
-  if (runStatus === 'complete') return null;
-  if (runStatus === 'pending') return null;
-  const active = stages.find(
-    (s) => s.status === 'running' || s.status === 'awaiting_approval' || s.status === 'failed',
-  );
-  if (active) {
-    const idx = ALL_STAGES.findIndex((m) => m.id === active.stageId);
-    return `${String(idx + 1).padStart(2, '0')}/${ALL_STAGES.length} ${active.stageId}`;
-  }
-  const last = [...stages].reverse().find((s) => s.status === 'approved' || s.status === 'complete');
-  if (last) {
-    const idx = ALL_STAGES.findIndex((m) => m.id === last.stageId);
-    return `${String(idx + 1).padStart(2, '0')}/${ALL_STAGES.length} ${last.stageId}`;
-  }
-  return null;
+  if (awaiting.length === 0) return null;
+  return relTime(runs.find((r) => r.stages.some((s) => s.status === 'awaiting_approval'))?.createdAt ?? '');
 }
 
 const CHANNELS_LIST = ['all', 'aussie-politics-explained', 'latest-tech-explained'] as const;
+const STATUS_FILTERS: [StatusFilter, string][] = [
+  ['all', 'All'],
+  ['running', 'Running'],
+  ['awaiting', 'Approval'],
+  ['complete', 'Complete'],
+  ['failed', 'Failed'],
+];
 
 export default function RunsPage() {
   const [data, setData] = useState<RunsResponse | null>(null);
@@ -126,28 +130,26 @@ export default function RunsPage() {
 
   const counts = {
     all: runs.length,
-    running: runs.filter((r) => r.status === 'running').length,
+    running: runs.filter((r) => r.status === 'running' && !r.stages.some(s => s.status === 'awaiting_approval')).length,
+    awaiting: runs.filter((r) => r.stages.some((s) => s.status === 'awaiting_approval')).length,
     complete: runs.filter((r) => r.status === 'complete').length,
     failed: runs.filter((r) => r.status === 'failed').length,
     pending: runs.filter((r) => r.status === 'pending').length,
-    awaitingApproval: data?.awaitingApproval ?? 0,
   };
+
+  const activeChannels = new Set(runs.filter((r) => r.status === 'running').map((r) => r.channelId)).size;
+  const oldestAwaiting = oldestAwaitingAge(runs);
 
   const filtered = runs.filter((r) => {
     if (channelFilter !== 'all' && r.channelId !== channelFilter) return false;
-    if (statusFilter === 'running' && r.status !== 'running' && !r.stages.some(s => s.status === 'awaiting_approval')) return false;
-    if (statusFilter !== 'all' && statusFilter !== 'running' && r.status !== statusFilter) return false;
+    if (statusFilter === 'running' && (r.status !== 'running' || r.stages.some(s => s.status === 'awaiting_approval'))) return false;
+    if (statusFilter === 'awaiting' && !r.stages.some(s => s.status === 'awaiting_approval')) return false;
+    if (statusFilter === 'complete' && r.status !== 'complete') return false;
+    if (statusFilter === 'failed' && r.status !== 'failed') return false;
+    if (statusFilter === 'pending' && r.status !== 'pending') return false;
     if (q && !r.inputText.toLowerCase().includes(q.toLowerCase()) && !r.id.includes(q)) return false;
     return true;
   });
-
-  const STATUS_FILTERS: [StatusFilter, string][] = [
-    ['all', 'All'],
-    ['running', 'Running'],
-    ['complete', 'Complete'],
-    ['failed', 'Failed'],
-    ['pending', 'Pending'],
-  ];
 
   return (
     <div className="page">
@@ -175,17 +177,17 @@ export default function RunsPage() {
         <div className="stat stat--running">
           <div className="stat__label"><span className="dot" />Running</div>
           <div className="stat__val">{counts.running}</div>
-          <div className="stat__delta">active pipelines</div>
+          <div className="stat__delta">across <b>{activeChannels}</b> channel{activeChannels !== 1 ? 's' : ''}</div>
         </div>
         <div className="stat stat--approval">
           <div className="stat__label"><span className="dot" />Awaiting approval</div>
-          <div className="stat__val">{counts.awaitingApproval}</div>
-          <div className="stat__delta">stages need review</div>
+          <div className="stat__val">{counts.awaiting}</div>
+          <div className="stat__delta">{oldestAwaiting ? <>oldest <b>{oldestAwaiting}</b></> : 'none pending'}</div>
         </div>
         <div className="stat stat--failed">
           <div className="stat__label"><span className="dot" />Failed</div>
           <div className="stat__val">{counts.failed}</div>
-          <div className="stat__delta">need attention</div>
+          <div className="stat__delta">{counts.failed > 0 ? <><b>{counts.failed}</b> need{counts.failed === 1 ? 's' : ''} review</> : 'all clear'}</div>
         </div>
       </div>
 
@@ -193,7 +195,7 @@ export default function RunsPage() {
         <div className="search">
           <span className="ic"><IcSearch size={13} /></span>
           <input
-            placeholder="Search topic or run ID…"
+            placeholder="Search topic, run id, or source…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -208,7 +210,7 @@ export default function RunsPage() {
               onClick={() => setStatusFilter(k)}
             >
               {label}
-              <span className="num">{counts[k === 'all' ? 'all' : k] ?? 0}</span>
+              <span className="num">{counts[k] ?? 0}</span>
             </button>
           ))}
         </div>
@@ -218,7 +220,7 @@ export default function RunsPage() {
           <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} style={{ color: 'var(--tx-1)' }}>
             {CHANNELS_LIST.map((id) => (
               <option key={id} value={id}>
-                {id === 'all' ? 'All channels' : (CHANNEL_MAP[id]?.short ?? id)}
+                {id === 'all' ? 'All' : (CHANNEL_MAP[id]?.short ?? id)}
               </option>
             ))}
           </select>
@@ -244,14 +246,14 @@ export default function RunsPage() {
 
       {!data ? (
         <div className="runs">
-          {Array.from({ length: 3 }, (_, i) => (
-            <div className="run__row" key={i} style={{ cursor: 'default' }}>
-              <div><div className="skel" style={{ height: 13, width: '60%', marginBottom: 6 }} /><div className="skel" style={{ height: 10, width: '30%' }} /></div>
+          {Array.from({ length: 4 }, (_, i) => (
+            <div className="run__row run__row--wide" key={i} style={{ cursor: 'default' }}>
+              <div><div className="skel" style={{ height: 13, width: '70%', marginBottom: 5 }} /><div className="skel" style={{ height: 10, width: '25%' }} /></div>
               <div><div className="skel" style={{ height: 10, width: 80 }} /></div>
-              <div><div className="skel" style={{ height: 20, width: 60, borderRadius: 4 }} /></div>
-              <div><div className="skel" style={{ height: 10, width: 120 }} /></div>
-              <div><div className="skel" style={{ height: 10, width: 60 }} /></div>
-              <div><div className="skel" style={{ height: 10, width: 50 }} /></div>
+              <div><div className="skel" style={{ height: 20, width: 76, borderRadius: 20 }} /></div>
+              <div><div className="skel" style={{ height: 5, width: '100%', borderRadius: 2 }} /></div>
+              <div><div className="skel" style={{ height: 10, width: 70 }} /></div>
+              <div><div className="skel" style={{ height: 10, width: 44 }} /></div>
               <div />
             </div>
           ))}
@@ -275,31 +277,38 @@ export default function RunsPage() {
           </div>
           {filtered.map((run) => {
             const ch = CHANNEL_MAP[run.channelId];
-            const cur = currentStage(run.stages, run.status);
-            const displayStatus = run.stages.some(s => s.status === 'awaiting_approval') ? 'awaiting_approval' : run.status;
+            const cur = currentStage(run.stages);
+            const ds = displayStatus(run);
             return (
               <Link key={run.id} href={`/runs/${run.id}`} className="run__row run__row--wide" style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="run__topic">
                   <b>{run.inputText}</b>
-                  <small style={{ fontFamily: 'var(--f-mono)', fontSize: 10, color: 'var(--tx-4)' }}>{run.id.slice(0, 8)}</small>
+                  <small>{run.id.slice(0, 8)}</small>
                 </div>
                 <div className="run__channel">
-                  {ch && (
-                    <div className="ch-dot" style={{ background: `linear-gradient(135deg, ${ch.palette[0]} 0% 50%, ${ch.palette[1]} 50% 100%)` }} />
-                  )}
+                  {ch && <div className="ch-dot" style={{ background: `linear-gradient(135deg, ${ch.palette[0]} 0% 50%, ${ch.palette[1]} 50% 100%)` }} />}
                   {ch?.short ?? run.channelId}
                 </div>
                 <div>
-                  <span className={pillClass(displayStatus)}>
+                  <span className={pillClass(ds)}>
                     <span className="dot" />
-                    {pillLabel(displayStatus)}
+                    {pillLabel(ds)}
                   </span>
                 </div>
                 <div>
-                  <PipelineBar stages={run.stages} runStatus={run.status} />
+                  <PipelineBar stages={run.stages} />
                 </div>
-                <div style={{ fontFamily: 'var(--f-mono)', fontSize: 11, color: 'var(--tx-3)', whiteSpace: 'nowrap' }}>
-                  {cur ?? '—'}
+                <div className="run__cur">
+                  {cur ? (
+                    <>
+                      <span className="run__cur-idx">{String(cur.idx).padStart(2, '0')}/{ALL_STAGES.length}</span>
+                      <span className="run__cur-name">{cur.name}</span>
+                    </>
+                  ) : run.status === 'complete' ? (
+                    <span className="run__cur-idx">10/10 —</span>
+                  ) : (
+                    <span className="run__cur-idx">00/{ALL_STAGES.length} —</span>
+                  )}
                 </div>
                 <div className="run__time">{relTime(run.createdAt)}</div>
                 <div className="run__chev"><IcChev size={14} /></div>

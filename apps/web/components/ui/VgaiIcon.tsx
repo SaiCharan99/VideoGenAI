@@ -54,7 +54,6 @@ interface WordmarkProps {
 export function VgaiWordmark({ height = 18, className, style }: WordmarkProps) {
   const sw = 12;
   const cap: React.SVGProps<SVGPathElement> = {
-    stroke: 'currentColor',
     strokeWidth: sw,
     strokeLinecap: 'butt',
     strokeLinejoin: 'miter',
@@ -70,20 +69,20 @@ export function VgaiWordmark({ height = 18, className, style }: WordmarkProps) {
       className={className}
     >
       {/* V */}
-      <g transform="translate(0,0)">
+      <g transform="translate(0,0)" stroke="currentColor">
         <path d="M 6 0 L 28 80 L 50 0" {...cap} />
       </g>
       {/* G */}
-      <g transform="translate(68,0)">
+      <g transform="translate(68,0)" stroke="#00e5ff">
         <path d="M 50 14 L 50 0 L 0 0 L 0 80 L 50 80 L 50 40 L 28 40" {...cap} />
       </g>
       {/* A */}
-      <g transform="translate(136,0)">
+      <g transform="translate(136,0)" stroke="#00e5ff">
         <path d="M 6 80 L 28 0 L 50 80" {...cap} />
         <path d="M 14 50 L 42 50" {...cap} />
       </g>
       {/* I */}
-      <g transform="translate(204,0)">
+      <g transform="translate(204,0)" stroke="#00e5ff">
         <path d="M 6 0 L 50 0" {...cap} />
         <path d="M 28 0 L 28 80" {...cap} />
         <path d="M 6 80 L 50 80" {...cap} />

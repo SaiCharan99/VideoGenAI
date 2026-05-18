@@ -812,11 +812,44 @@ a.hdr__brand:hover svg {
   color: var(--tx-1);
 }
 
-/* Wide runs grid — adds Pipeline + Current columns */
+/* Wide runs grid — Topic | Channel | Status | Pipeline | Current | Created | › */
 .runs__head--wide,
 .run__row--wide {
-  grid-template-columns: 1.6fr 0.85fr 110px 148px 100px 80px 28px;
+  grid-template-columns: 1.6fr 0.9fr 108px 220px 110px 72px 24px;
 }
+
+/* Pipeline mini-bar segments */
+.pipe-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+}
+.pipe-seg {
+  flex: 1;
+  height: 5px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.pipe-seg--done   { background: var(--ac-ok); }
+.pipe-seg--await  { background: var(--ac-approve); }
+.pipe-seg--run    { background: var(--ac-active); }
+.pipe-seg--failed { background: var(--ac-bad); }
+.pipe-seg--dim    { background: var(--br-2); }
+
+/* Current stage label */
+.run__cur {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.run__cur-idx { color: var(--tx-4); }
+.run__cur-name { color: var(--tx-2); overflow: hidden; text-overflow: ellipsis; }
 
 /* Mini pipeline track */
 .track {
