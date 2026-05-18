@@ -12,8 +12,8 @@ export const ALL_STAGES: StageMeta[] = [
   { id: 'script', label: 'Script', hasApproval: true },
   { id: 'fact-check', label: 'Fact-check', hasApproval: true },
   { id: 'storyboard', label: 'Storyboard', hasApproval: true },
-  { id: 'assets', label: 'Assets', hasApproval: false, comingSoon: true },
-  { id: 'render', label: 'Render', hasApproval: false, comingSoon: true },
+  { id: 'assets', label: 'Assets', hasApproval: false },
+  { id: 'render', label: 'Render', hasApproval: false },
   { id: 'qa', label: 'QA', hasApproval: false, comingSoon: true },
   { id: 'publish', label: 'Publish', hasApproval: true, comingSoon: true },
 ];
