@@ -66,12 +66,6 @@ export async function runResearcher(
     maxTokens: 4096,
   });
 
-  if (factPack.sources.length < channel.research.min_sources) {
-    throw new Error(
-      `Researcher: only ${factPack.sources.length} sources found, need at least ${channel.research.min_sources}`,
-    );
-  }
-
   // Verify source provenance and auto-heal: if a fact references a source the LLM forgot to
   // include in its output sources array, add it from withText. Truly hallucinated IDs (not in
   // withText at all) are stripped from those facts; facts with no remaining source_ids are dropped.
@@ -109,13 +103,22 @@ export async function runResearcher(
     }
   }
 
-  await markStageAwaitingApproval(runId, 'research', factPack);
+  // Validate after auto-heal (mutation may have changed sources/facts)
+  const validated = factPackSchema.parse(factPack);
+
+  if (validated.sources.length < channel.research.min_sources) {
+    throw new Error(
+      `Researcher: only ${validated.sources.length} sources found, need at least ${channel.research.min_sources}`,
+    );
+  }
+
+  await markStageAwaitingApproval(runId, 'research', validated);
   logger.info('complete', {
-    sources: factPack.sources.length,
-    facts: factPack.facts.length,
-    balancePassed: factPack.balance_check.passed,
+    sources: validated.sources.length,
+    facts: validated.facts.length,
+    balancePassed: validated.balance_check.passed,
   });
-  return factPack;
+  return validated;
 }
 
 function buildQueries(brief: Brief, channel: ChannelConfig): string[] {

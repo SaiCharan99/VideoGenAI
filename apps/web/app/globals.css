@@ -2068,7 +2068,9 @@ a.hdr__brand:hover svg {
     grid-template-columns: 1fr 1fr;
   }
   .runs__head,
-  .run__row {
+  .run__row,
+  .runs__head--wide,
+  .run__row--wide {
     grid-template-columns: 1.4fr 100px 28px;
   }
 }

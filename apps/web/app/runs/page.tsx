@@ -86,11 +86,10 @@ function pillLabel(status: string): string {
 }
 
 function oldestAwaitingAge(runs: Run[]): string | null {
-  const awaiting = runs.flatMap((r) =>
-    r.stages.filter((s) => s.status === 'awaiting_approval'),
-  );
-  if (awaiting.length === 0) return null;
-  return relTime(runs.find((r) => r.stages.some((s) => s.status === 'awaiting_approval'))?.createdAt ?? '');
+  const awaitingRuns = runs.filter((r) => r.stages.some((s) => s.status === 'awaiting_approval'));
+  if (awaitingRuns.length === 0) return null;
+  const oldest = awaitingRuns.reduce((min, r) => (r.createdAt < min.createdAt ? r : min));
+  return oldest.createdAt ? relTime(oldest.createdAt) : null;
 }
 
 const CHANNELS_LIST = ['all', 'aussie-politics-explained', 'latest-tech-explained'] as const;
@@ -305,7 +304,7 @@ export default function RunsPage() {
                       <span className="run__cur-name">{cur.name}</span>
                     </>
                   ) : run.status === 'complete' ? (
-                    <span className="run__cur-idx">10/10 —</span>
+                    <span className="run__cur-idx">{ALL_STAGES.length}/{ALL_STAGES.length} —</span>
                   ) : (
                     <span className="run__cur-idx">00/{ALL_STAGES.length} —</span>
                   )}
