@@ -58,7 +58,6 @@ function Header() {
         <VgaiIcon variant="dark" animated height={28} />
         <div className="hdr__name">
           <VgaiWordmark height={16} />
-          <span>/ cockpit</span>
         </div>
       </Link>
       <div className="hdr__crumbs">{crumbs}</div>
