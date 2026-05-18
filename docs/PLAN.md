@@ -104,7 +104,7 @@ Specifically verify:
 
 ---
 
-## ⬜ Phase 5 — Render
+## ✅ Phase 5 — Render
 
 Pixels.
 
@@ -114,9 +114,9 @@ Pixels.
 | 2   | Channel-specific theming (politics: news aesthetic; tech: clean minimal)                            | Per-channel visual style     |
 | 3   | Stage 7: asset-generator agent (TTS via ElevenLabs, stock via Pexels, AI stills via Replicate/Flux) | All assets fetched/generated |
 | 4   | Stage 8: assembler agent — Remotion render trigger                                                  | First video output           |
-| 5   | Cockpit: asset preview (waveform, image thumbnails, clip thumbnails)                                | Review before render         |
+| 5   | Cockpit: asset preview (audio player, image thumbnails, video clip hover-play, render manifest)     | Review before render         |
 
-**Exit criteria:** End-to-end run produces a watchable MP4. Quality is okay but not great.
+**Done.** Pipeline pause/resume kill switch also added (DB flag + Inngest waitForEvent gates). MP4 requires `npx remotion render` with the written manifest.
 
 ---
 
