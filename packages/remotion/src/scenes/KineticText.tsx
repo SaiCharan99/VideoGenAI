@@ -9,7 +9,7 @@ interface Props {
 export function KineticText({ text, theme }: Props) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const words = text.split(' ');
+  const words = text.trim().split(/\s+/);
   const staggerFrames = theme.motionIntensity === 'snappy' ? fps * 0.055 : fps * 0.1;
   const springConfig =
     theme.motionIntensity === 'snappy'

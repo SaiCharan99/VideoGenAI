@@ -11,6 +11,16 @@ import path from 'path';
 import { upsertStage, markStageRunning, markStageFailed } from '../db-ops.js';
 import { createLogger } from '../logger.js';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ASSET_ROOT = path.resolve('apps/web/public/assets/runs');
+
+function validateRunId(runId: string): string {
+  if (!UUID_RE.test(runId)) throw new Error(`Invalid runId: ${runId}`);
+  const dir = path.join(ASSET_ROOT, runId);
+  if (!dir.startsWith(ASSET_ROOT + path.sep)) throw new Error('runId path traversal detected');
+  return dir;
+}
+
 export async function runAssembler(
   runId: string,
   script: Script,
@@ -23,7 +33,7 @@ export async function runAssembler(
 
   try {
     const totalSeconds = storyboard.scenes.reduce((s, sc) => s + sc.duration_seconds, 0);
-    const outDir = path.resolve(`apps/web/public/assets/runs/${runId}`);
+    const outDir = validateRunId(runId);
     await mkdir(outDir, { recursive: true });
 
     // Write a render manifest so the CLI / Remotion Studio can pick it up

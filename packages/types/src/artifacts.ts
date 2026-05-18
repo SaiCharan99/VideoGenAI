@@ -110,7 +110,7 @@ export const ttsAssetSchema = z.object({
 export const stockBrollAssetSchema = z.object({
   kind: z.literal('stock_broll'),
   scene: z.number().int(),
-  url: z.string(),
+  url: z.string().url(),
   provider: z.string(),
   attribution: z.string().optional(),
 });
@@ -118,7 +118,7 @@ export const stockBrollAssetSchema = z.object({
 export const generatedStillAssetSchema = z.object({
   kind: z.literal('generated_still'),
   scene: z.number().int(),
-  url: z.string(),
+  url: z.string().url(),
   prompt: z.string(),
 });
 
@@ -137,8 +137,8 @@ export type AssetManifest = z.infer<typeof assetManifestSchema>;
 
 export const renderResultSchema = z.object({
   output_url: z.string(),
-  duration_seconds: z.number(),
-  width: z.number(),
-  height: z.number(),
+  duration_seconds: z.number().nonnegative(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
 });
 export type RenderResult = z.infer<typeof renderResultSchema>;

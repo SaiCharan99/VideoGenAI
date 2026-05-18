@@ -37,38 +37,53 @@ export async function runAssetGenerator(
       (s) => s.visual_kind === 'generated_still' || s.visual_kind === 'generated_clip',
     );
 
-    await Promise.allSettled([
+    const results = await Promise.allSettled([
       ...stockScenes.map(async (scene) => {
-        const result = await fetchPexelsVideo(scene.visual_description);
-        if (result) {
-          assets.push({
-            kind: 'stock_broll',
-            scene: scene.scene,
-            url: result.url,
-            provider: 'pexels',
-            attribution: result.attribution,
-          });
-          logger.info('stock asset fetched', { scene: scene.scene });
-        } else {
-          logger.warn('no Pexels result for scene', { scene: scene.scene });
+        try {
+          const result = await fetchPexelsVideo(scene.visual_description);
+          if (result) {
+            assets.push({
+              kind: 'stock_broll',
+              scene: scene.scene,
+              url: result.url,
+              provider: 'pexels',
+              attribution: result.attribution,
+            });
+            logger.info('stock asset fetched', { scene: scene.scene });
+          } else {
+            logger.warn('no Pexels result for scene', { scene: scene.scene });
+          }
+        } catch (err) {
+          logger.warn('stock asset fetch threw', { scene: scene.scene, reason: String(err) });
         }
       }),
       ...generatedScenes.map(async (scene) => {
-        const url = await generateFluxImage(scene.visual_description);
-        if (url) {
-          assets.push({
-            kind: 'generated_still',
-            scene: scene.scene,
-            url,
-            prompt: scene.visual_description,
-          });
-          logger.info('AI image generated', { scene: scene.scene });
-        } else {
-          logger.warn('Flux generation returned null for scene', { scene: scene.scene });
+        try {
+          const url = await generateFluxImage(scene.visual_description);
+          if (url) {
+            assets.push({
+              kind: 'generated_still',
+              scene: scene.scene,
+              url,
+              prompt: scene.visual_description,
+            });
+            logger.info('AI image generated', { scene: scene.scene });
+          } else {
+            logger.warn('Flux generation returned null for scene', { scene: scene.scene });
+          }
+        } catch (err) {
+          logger.warn('image generation threw', { scene: scene.scene, reason: String(err) });
         }
       }),
     ]);
 
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        logger.warn('unexpected allSettled rejection', { reason: String(r.reason) });
+      }
+    }
+
+    assets.sort((a, b) => a.scene - b.scene);
     const manifest = assetManifestSchema.parse({ narration_url, assets });
 
     // No approval gate — mark approved immediately so assembler can proceed

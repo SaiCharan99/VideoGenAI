@@ -18,7 +18,7 @@ export function StockBroll({ assetUrl, visualDescription, textOverlay, theme }: 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
       {isVideo ? (
-        <Video src={assetUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <Video muted src={assetUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
         <Img src={assetUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       )}
