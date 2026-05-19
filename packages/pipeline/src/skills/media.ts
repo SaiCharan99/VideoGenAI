@@ -5,7 +5,8 @@ import path from 'path';
 // ── Shared helpers ───────────────────────────────────────────────────────────
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ASSET_ROOT = path.resolve('apps/web/public/assets/runs');
+// Next.js sets cwd to apps/web/; resolve from there, not monorepo root
+const ASSET_ROOT = path.resolve('public/assets/runs');
 
 function validateRunId(runId: string): string {
   if (!UUID_RE.test(runId)) throw new Error(`Invalid runId: ${runId}`);

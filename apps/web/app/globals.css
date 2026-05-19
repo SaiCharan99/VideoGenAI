@@ -1286,37 +1286,54 @@ a.hdr__brand:hover svg {
 .pipeline {
   display: flex;
   align-items: stretch;
-  background: var(--bg-2);
-  border: 1px solid var(--br-2);
+  background: var(--bg-1);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: var(--r-3);
   padding: 8px;
   gap: 4px;
   overflow-x: auto;
+  box-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 .stage-node {
   flex: 1 1 0;
   min-width: 88px;
   padding: 10px 12px;
   border-radius: var(--r-2);
-  background: var(--bg-1);
-  border: 1px solid var(--br-1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 60%), var(--bg-2);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   flex-direction: column;
   gap: 4px;
   cursor: pointer;
   transition:
-    background 0.12s,
-    border-color 0.12s;
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
   position: relative;
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22);
 }
 .stage-node:hover {
-  background: var(--bg-3);
-  border-color: var(--br-2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.065) 0%, transparent 60%), var(--bg-3);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
 }
 .stage-node.selected {
-  background: var(--bg-3);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.065) 0%, transparent 60%), var(--bg-3);
   border-color: var(--br-strong);
-  box-shadow: 0 0 0 1px var(--br-strong) inset;
+  box-shadow:
+    0 0 0 1px var(--br-strong) inset,
+    0 2px 10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
 }
 .stage-node__top {
   display: flex;
@@ -1350,6 +1367,15 @@ a.hdr__brand:hover svg {
   position: relative;
   overflow: hidden;
 }
+.stage-node.done {
+  background: linear-gradient(180deg, rgba(52, 211, 153, 0.07) 0%, transparent 60%), var(--bg-2);
+  border-color: rgba(52, 211, 153, 0.2);
+  box-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.45),
+    0 0 14px rgba(52, 211, 153, 0.08),
+    inset 0 1px 0 rgba(52, 211, 153, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+}
 .stage-node.done .stage-node__bar {
   background: var(--ac-ok);
 }
@@ -1358,6 +1384,15 @@ a.hdr__brand:hover svg {
 }
 .stage-node.done .stage-node__status {
   color: var(--ac-ok);
+}
+.stage-node.running {
+  background: linear-gradient(180deg, rgba(99, 179, 237, 0.07) 0%, transparent 60%), var(--bg-2);
+  border-color: rgba(99, 179, 237, 0.2);
+  box-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.45),
+    0 0 14px rgba(99, 179, 237, 0.1),
+    inset 0 1px 0 rgba(99, 179, 237, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22);
 }
 .stage-node.running .stage-node__bar {
   background: linear-gradient(90deg, var(--ac-active) 0%, var(--ac-active) 50%, var(--bg-4) 50%);
@@ -1372,7 +1407,12 @@ a.hdr__brand:hover svg {
 }
 .stage-node.approval {
   border-color: var(--ac-approve);
-  background: linear-gradient(180deg, rgba(255, 176, 32, 0.05), transparent 60%), var(--bg-3);
+  background: linear-gradient(180deg, rgba(255, 176, 32, 0.08) 0%, transparent 60%), var(--bg-3);
+  box-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.45),
+    0 0 16px rgba(255, 176, 32, 0.1),
+    inset 0 1px 0 rgba(255, 176, 32, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.24);
 }
 .stage-node.approval .stage-node__bar {
   background: var(--ac-approve);
@@ -1393,6 +1433,15 @@ a.hdr__brand:hover svg {
   background: var(--ac-approve);
   box-shadow: 0 0 8px var(--ac-approve);
   animation: pulse 1.6s ease-in-out infinite;
+}
+.stage-node.failed {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.07) 0%, transparent 60%), var(--bg-2);
+  border-color: rgba(248, 113, 113, 0.2);
+  box-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.45),
+    0 0 14px rgba(248, 113, 113, 0.08),
+    inset 0 1px 0 rgba(248, 113, 113, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22);
 }
 .stage-node.failed .stage-node__bar {
   background: var(--ac-bad);
