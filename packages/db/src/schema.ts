@@ -11,6 +11,17 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+export const credentials = pgTable('credentials', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  provider: text('provider').notNull().unique(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  scope: text('scope'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const runStatusEnum = pgEnum('run_status', ['pending', 'running', 'complete', 'failed']);
 
 export const stageIdEnum = pgEnum('stage_id', [

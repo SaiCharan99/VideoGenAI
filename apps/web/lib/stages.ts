@@ -14,8 +14,8 @@ export const ALL_STAGES: StageMeta[] = [
   { id: 'storyboard', label: 'Storyboard', hasApproval: true },
   { id: 'assets', label: 'Assets', hasApproval: false },
   { id: 'render', label: 'Render', hasApproval: false },
-  { id: 'qa', label: 'QA', hasApproval: false, comingSoon: true },
-  { id: 'publish', label: 'Publish', hasApproval: true, comingSoon: true },
+  { id: 'qa', label: 'QA', hasApproval: true },
+  { id: 'publish', label: 'Publish', hasApproval: false },
 ];
 
 export const LIVE_STAGES = ALL_STAGES.filter((s) => !s.comingSoon);

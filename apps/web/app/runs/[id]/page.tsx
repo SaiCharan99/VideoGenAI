@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CHANNEL_MAP, fmtRange } from '@/lib/channels';
 import { ALL_STAGES, LIVE_STAGES, fmtDuration, relTime } from '@/lib/stages';
 import {
-  IcTerminal, IcBrackets, IcCopy, IcAlert, IcArrowR, IcClock,
+  IcTerminal, IcBrackets, IcCopy, IcAlert, IcArrowR, IcClock, IcExt, IcCheck, IcX,
 } from '@/components/ui/Icons';
 
 function cls(...args: (string | boolean | undefined | null)[]) {
@@ -90,6 +90,7 @@ export default function RunDetailPage() {
   const [loadError, setLoadError] = useState('');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [pauseLoading, setPauseLoading] = useState(false);
+  const [ytStatus, setYtStatus] = useState<{ connected: boolean; expired?: boolean } | null>(null);
   const hasAutoSelected = useRef(false);
 
   const fetchData = useCallback(async () => {
@@ -138,6 +139,13 @@ export default function RunDetailPage() {
     const t = setInterval(() => void fetchData(), 4000);
     return () => clearInterval(t);
   }, [fetchData]);
+
+  useEffect(() => {
+    void fetch('/api/auth/youtube/status')
+      .then((r) => r.json())
+      .then((d) => setYtStatus(d as { connected: boolean; expired?: boolean }))
+      .catch(() => null);
+  }, []);
 
   useEffect(() => {
     if (!selectedStageId) return;
@@ -259,7 +267,7 @@ export default function RunDetailPage() {
               onClick={isClickable ? () => setSelectedStageId(meta.id) : undefined}
               role={isClickable ? 'button' : undefined}
               tabIndex={isClickable ? 0 : undefined}
-              title={meta.comingSoon ? 'Phase 5 — not yet built' : undefined}
+              title={meta.comingSoon ? 'Coming soon' : undefined}
               onKeyDown={isClickable ? (e) => {
                 if (e.key === 'Enter' || e.key === ' ') setSelectedStageId(meta.id);
               } : undefined}
@@ -411,6 +419,66 @@ export default function RunDetailPage() {
                 >
                   <IcArrowR size={11} /> Jump to stage
                 </button>
+              </div>
+            </div>
+          )}
+
+          {ytStatus !== null && (
+            <div
+              className="swid"
+              style={
+                ytStatus.connected && !ytStatus.expired
+                  ? { borderColor: 'var(--ac-ok-br)' }
+                  : undefined
+              }
+            >
+              <div
+                className="swid__head"
+                style={
+                  ytStatus.connected && !ytStatus.expired
+                    ? { color: 'var(--ac-ok)' }
+                    : undefined
+                }
+              >
+                YouTube
+              </div>
+              <div className="swid__body">
+                {ytStatus.connected && !ytStatus.expired ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12,
+                      color: 'var(--ac-ok)',
+                    }}
+                  >
+                    <IcCheck size={12} /> Connected
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: 12,
+                        color: 'var(--ac-bad)',
+                        marginBottom: 8,
+                      }}
+                    >
+                      <IcX size={12} />{' '}
+                      {ytStatus.expired ? 'Token expired' : 'Not connected'}
+                    </div>
+                    <a
+                      href="/api/auth/youtube"
+                      className="btn btn--ghost btn--sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <IcExt size={11} /> Connect YouTube
+                    </a>
+                  </>
+                )}
               </div>
             </div>
           )}

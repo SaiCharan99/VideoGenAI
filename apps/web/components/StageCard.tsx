@@ -105,6 +105,21 @@ function computeMetrics(stageId: string, output: unknown): [string, string | num
       dur !== null ? `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, '0')}` : null;
     return durLabel ? [['duration', durLabel]] : null;
   }
+  if (stageId === 'qa') {
+    const verdict = typeof o.verdict === 'string' ? o.verdict.replace('_', ' ') : null;
+    const quality =
+      typeof o.quality_score === 'number' ? `${Math.round(o.quality_score * 100)}%` : null;
+    const issues = Array.isArray(o.issues) ? (o.issues as unknown[]).length : 0;
+    return [
+      ...(verdict ? [['verdict', verdict] as [string, string]] : []),
+      ...(quality ? [['quality', quality] as [string, string]] : []),
+      ['issues', issues],
+    ];
+  }
+  if (stageId === 'publish') {
+    const videoId = typeof o.youtube_video_id === 'string' ? o.youtube_video_id : null;
+    return videoId ? [['video', videoId.slice(0, 8) + '…']] : null;
+  }
   return null;
 }
 
