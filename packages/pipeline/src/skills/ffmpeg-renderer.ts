@@ -162,9 +162,9 @@ export async function assembleVideoWithFfmpeg(
 
       try {
         if (asset?.kind === 'screenshot') {
-          // resolve local path relative to public/ dir
-          const localPath = asset.local_path ?? asset.url.replace(/^\//, '');
-          const absPath = path.resolve('public', localPath.replace(/^\//, ''));
+          // asset.url is the web-root path e.g. /assets/sitespace/home.png
+          // resolve it relative to the Next.js public/ directory
+          const absPath = path.resolve('public', asset.url.replace(/^\//, ''));
           if (existsSync(absPath)) {
             await makeImageClip(ffmpeg, absPath, scene.duration_seconds, clipPath);
             logger.info(`scene ${scene.scene}: screenshot clip done`);

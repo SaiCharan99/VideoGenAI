@@ -53,7 +53,7 @@
         "scene": 1,
         "duration_seconds": 15,
         "visual_kind": "stock_broll",
-        "visual_description": "construction site worker phone frustrated hard hat",
+        "visual_description": "construction site workers",
         "text_overlay": "The hidden cost of asset chaos"
       },
       {
@@ -68,7 +68,7 @@
         "scene": 3,
         "duration_seconds": 15,
         "visual_kind": "stock_broll",
-        "visual_description": "QR code scanning tablet construction site entry verification",
+        "visual_description": "tablet scanning QR code",
         "text_overlay": "Verified. Compliant. On site."
       },
       {
@@ -91,21 +91,21 @@
         "scene": 6,
         "duration_seconds": 20,
         "visual_kind": "stock_broll",
-        "visual_description": "construction office site manager laptop civil engineering project",
+        "visual_description": "engineer laptop office",
         "text_overlay": "Configured for your site. Configured for your team."
       },
       {
         "scene": 7,
         "duration_seconds": 25,
         "visual_kind": "stock_broll",
-        "visual_description": "construction site sunset golden hour organised efficient workers",
+        "visual_description": "construction workers team",
         "text_overlay": "AI that learns your site."
       },
       {
         "scene": 8,
         "duration_seconds": 20,
         "visual_kind": "stock_broll",
-        "visual_description": "construction site aerial golden hour tower crane sunset coordinated",
+        "visual_description": "construction crane aerial",
         "text_overlay": "sitespace.com.au"
       }
     ]
