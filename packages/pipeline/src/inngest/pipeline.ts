@@ -12,7 +12,7 @@ import { runQaReviewer } from '../agents/qa-reviewer.js';
 import { runResearcher } from '../agents/researcher.js';
 import { runScriptwriter } from '../agents/scriptwriter.js';
 import { runStoryboarder } from '../agents/storyboarder.js';
-import { markStageFailed } from '../db-ops.js';
+import { markStageFailed, upsertStage } from '../db-ops.js';
 import { inngest } from './client.js';
 
 export const pipelineRun = inngest.createFunction(
@@ -38,6 +38,13 @@ export const pipelineRun = inngest.createFunction(
       .set({ status: 'running', updatedAt: new Date() })
       .where(eq(runs.id, runId));
 
+    // Read once — stays constant for the lifetime of this run
+    const autoApprove = await step.run('read/auto-approve', () =>
+      db.query.runs
+        .findFirst({ where: eq(runs.id, runId), columns: { autoApprove: true } })
+        .then((r) => r?.autoApprove ?? false),
+    );
+
     // ── Stage 1: Brief ──────────────────────────────────────────────────────
     let effectiveBrief!: Brief;
     {
@@ -51,6 +58,14 @@ export const pipelineRun = inngest.createFunction(
             throw err;
           }
         });
+
+        if (autoApprove) {
+          await step.run(`auto-approve/brief/${attempt}`, () =>
+            upsertStage(runId, 'brief', 'approved', result),
+          );
+          effectiveBrief = result;
+          break;
+        }
 
         const response = await step.waitForEvent(`brief/response/${attempt}`, {
           event: 'videogenai/stage.brief.response',
@@ -96,6 +111,14 @@ export const pipelineRun = inngest.createFunction(
             throw err;
           }
         });
+
+        if (autoApprove) {
+          await step.run(`auto-approve/research/${attempt}`, () =>
+            upsertStage(runId, 'research', 'approved', result),
+          );
+          effectiveFactPack = result;
+          break;
+        }
 
         const response = await step.waitForEvent(`research/response/${attempt}`, {
           event: 'videogenai/stage.research.response',
@@ -172,6 +195,14 @@ export const pipelineRun = inngest.createFunction(
           }
         });
 
+        if (autoApprove) {
+          await step.run(`auto-approve/script/${attempt}`, () =>
+            upsertStage(runId, 'script', 'approved', result),
+          );
+          effectiveScript = result;
+          break;
+        }
+
         const response = await step.waitForEvent(`script/response/${attempt}`, {
           event: 'videogenai/stage.script.response',
           match: 'data.runId',
@@ -221,6 +252,14 @@ export const pipelineRun = inngest.createFunction(
             throw err;
           }
         });
+
+        if (autoApprove) {
+          await step.run(`auto-approve/fact-check/${attempt}`, () =>
+            upsertStage(runId, 'fact-check', 'approved', result),
+          );
+          factCheckReport = result;
+          break;
+        }
 
         const response = await step.waitForEvent(`fact-check/response/${attempt}`, {
           event: 'videogenai/stage.fact-check.response',
@@ -272,6 +311,14 @@ export const pipelineRun = inngest.createFunction(
             throw err;
           }
         });
+
+        if (autoApprove) {
+          await step.run(`auto-approve/storyboard/${attempt}`, () =>
+            upsertStage(runId, 'storyboard', 'approved', result),
+          );
+          storyboard = result;
+          break;
+        }
 
         const response = await step.waitForEvent(`storyboard/response/${attempt}`, {
           event: 'videogenai/stage.storyboard.response',
@@ -373,6 +420,14 @@ export const pipelineRun = inngest.createFunction(
             throw err;
           }
         });
+
+        if (autoApprove) {
+          await step.run(`auto-approve/qa/${attempt}`, () =>
+            upsertStage(runId, 'qa', 'approved', result),
+          );
+          effectiveQaReport = result;
+          break;
+        }
 
         const response = await step.waitForEvent(`qa/response/${attempt}`, {
           event: 'videogenai/stage.qa.response',

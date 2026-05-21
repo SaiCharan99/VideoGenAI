@@ -41,6 +41,12 @@ export const pipelineInject = inngest.createFunction(
       .set({ status: 'running', updatedAt: new Date() })
       .where(eq(runs.id, runId));
 
+    const autoApprove = await step.run('read/auto-approve', () =>
+      db.query.runs
+        .findFirst({ where: eq(runs.id, runId), columns: { autoApprove: true } })
+        .then((r) => r?.autoApprove ?? false),
+    );
+
     // Parse and validate the injected script + storyboard
     const script = scriptSchema.parse(event.data.script);
     const storyboard = storyboardSchema.parse(event.data.storyboard);
@@ -111,6 +117,14 @@ export const pipelineInject = inngest.createFunction(
             throw err;
           }
         });
+
+        if (autoApprove) {
+          await step.run(`auto-approve/qa/${attempt}`, () =>
+            upsertStage(runId, 'qa', 'approved', result),
+          );
+          effectiveQaReport = result;
+          break;
+        }
 
         const response = await step.waitForEvent(`qa/response/${attempt}`, {
           event: 'videogenai/stage.qa.response',

@@ -33,6 +33,7 @@ interface Run {
   inputText: string;
   status: string;
   paused: boolean;
+  autoApprove: boolean;
   createdAt: string;
 }
 
@@ -90,6 +91,7 @@ export default function RunDetailPage() {
   const [loadError, setLoadError] = useState('');
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [pauseLoading, setPauseLoading] = useState(false);
+  const [autoApproveLoading, setAutoApproveLoading] = useState(false);
   const [ytStatus, setYtStatus] = useState<{ connected: boolean; expired?: boolean } | null>(null);
   const hasAutoSelected = useRef(false);
 
@@ -127,6 +129,20 @@ export default function RunDetailPage() {
       await fetchData();
     } finally {
       setPauseLoading(false);
+    }
+  }, [id, fetchData]);
+
+  const handleAutoApproveToggle = useCallback(async (current: boolean) => {
+    setAutoApproveLoading(true);
+    try {
+      await fetch(`/api/runs/${id}/auto-approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !current }),
+      });
+      await fetchData();
+    } finally {
+      setAutoApproveLoading(false);
     }
   }, [id, fetchData]);
 
@@ -396,6 +412,51 @@ export default function RunDetailPage() {
                   <span className="v">{fmtDuration(scriptDur)}</span>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Auto-approve toggle */}
+          <div className="swid" style={run.autoApprove ? { borderColor: 'var(--ac-ok-br)' } : undefined}>
+            <div className="swid__head" style={run.autoApprove ? { color: 'var(--ac-ok)' } : undefined}>
+              Auto-approve
+            </div>
+            <div className="swid__body">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ fontSize: 12, color: 'var(--tx-2)', lineHeight: 1.45 }}>
+                  {run.autoApprove
+                    ? 'Pipeline runs end-to-end without stopping for approvals.'
+                    : 'Pipeline pauses at each stage for human review.'}
+                </span>
+                <button
+                  onClick={() => void handleAutoApproveToggle(run.autoApprove)}
+                  disabled={autoApproveLoading}
+                  style={{
+                    flexShrink: 0,
+                    width: 40,
+                    height: 22,
+                    borderRadius: 11,
+                    border: 'none',
+                    cursor: autoApproveLoading ? 'wait' : 'pointer',
+                    background: run.autoApprove ? 'var(--ac-ok)' : 'var(--bg-3)',
+                    position: 'relative',
+                    transition: 'background 0.18s',
+                    outline: 'none',
+                  }}
+                  aria-label={run.autoApprove ? 'Disable auto-approve' : 'Enable auto-approve'}
+                >
+                  <span style={{
+                    position: 'absolute',
+                    top: 3,
+                    left: run.autoApprove ? 21 : 3,
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    background: '#fff',
+                    transition: 'left 0.18s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+                  }} />
+                </button>
+              </div>
             </div>
           </div>
 
