@@ -46,38 +46,43 @@ export async function runAssetGenerator(
       (s) => s.visual_kind === 'screenshot',
     );
 
-    const results = await Promise.allSettled([
-      // ── Screenshot scenes — register the local path as-is ─────────────────
-      ...screenshotScenes.map((scene) => {
-        const localPath = scene.screenshot_path ?? null;
-        assets.push({
-          kind: 'screenshot',
-          scene: scene.scene,
-          url: localPath ? `/assets/${localPath}` : `/assets/sitespace/placeholder.png`,
-          local_path: localPath ?? undefined,
-        });
-        logger.info('screenshot asset registered', { scene: scene.scene, localPath });
-        return Promise.resolve();
-      }),
-      ...stockScenes.map(async (scene) => {
-        try {
-          const result = await fetchPexelsVideo(scene.visual_description);
-          if (result) {
-            assets.push({
-              kind: 'stock_broll',
-              scene: scene.scene,
-              url: result.url,
-              provider: 'pexels',
-              attribution: result.attribution,
-            });
-            logger.info('stock asset fetched', { scene: scene.scene });
-          } else {
-            logger.warn('no Pexels result for scene', { scene: scene.scene });
-          }
-        } catch (err) {
-          logger.warn('stock asset fetch threw', { scene: scene.scene, reason: String(err) });
+    // ── Screenshot scenes — register synchronously ────────────────────────────
+    for (const scene of screenshotScenes) {
+      const localPath = scene.screenshot_path ?? null;
+      assets.push({
+        kind: 'screenshot',
+        scene: scene.scene,
+        url: localPath ? `/assets/${localPath}` : `/assets/sitespace/placeholder.png`,
+        local_path: localPath ?? undefined,
+      });
+      logger.info('screenshot asset registered', { scene: scene.scene, localPath });
+    }
+
+    // ── Pexels stock scenes — sequential to avoid burst rate-limits ──────────
+    for (const scene of stockScenes) {
+      try {
+        const result = await fetchPexelsVideo(scene.visual_description);
+        if (result) {
+          assets.push({
+            kind: 'stock_broll',
+            scene: scene.scene,
+            url: result.url,
+            provider: 'pexels',
+            attribution: result.attribution,
+          });
+          logger.info('stock asset fetched', { scene: scene.scene });
+        } else {
+          logger.warn('no Pexels result for scene', { scene: scene.scene });
         }
-      }),
+      } catch (err) {
+        logger.warn('stock asset fetch threw', { scene: scene.scene, reason: String(err) });
+      }
+      // small gap to stay well within Pexels burst limits
+      await new Promise((r) => setTimeout(r, 500));
+    }
+
+    // ── AI-generated stills — parallel (Replicate handles concurrency) ────────
+    const results = await Promise.allSettled([
       ...generatedScenes.map(async (scene) => {
         try {
           const url = await generateFluxImage(scene.visual_description);
