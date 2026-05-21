@@ -77,8 +77,8 @@ export async function runAssetGenerator(
       } catch (err) {
         logger.warn('stock asset fetch threw', { scene: scene.scene, reason: String(err) });
       }
-      // small gap to stay well within Pexels burst limits
-      await new Promise((r) => setTimeout(r, 500));
+      // 1s gap between Pexels requests — avoids per-second burst limits
+      await new Promise((r) => setTimeout(r, 1000));
     }
 
     // ── AI-generated stills — parallel (Replicate handles concurrency) ────────

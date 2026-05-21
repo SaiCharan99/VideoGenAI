@@ -84,9 +84,13 @@ export async function fetchPexelsVideo(query: string): Promise<PexelsResult | nu
   if (!apiKey) return null;
 
   const res = await fetchWithTimeout(
-    `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=3&orientation=landscape`,
-    { headers: { Authorization: apiKey } },
-    15_000,
+    `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=5&orientation=landscape`,
+    {
+      headers: { Authorization: apiKey },
+      // disable Next.js fetch cache — each call must hit the network
+      cache: 'no-store',
+    },
+    20_000,
   );
   if (!res.ok) return null;
 
