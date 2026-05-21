@@ -11,6 +11,7 @@ const createRunSchema = z.object({
     .min(10)
     .max(500)
     .transform((s) => s.trim().replace(/\s+/g, ' ')),
+  autoApprove: z.boolean().optional().default(false),
 });
 
 export async function GET() {
@@ -37,7 +38,11 @@ export async function POST(req: Request) {
 
   const [run] = await db
     .insert(runs)
-    .values({ channelId: parsed.data.channelId, inputText: parsed.data.inputText })
+    .values({
+      channelId: parsed.data.channelId,
+      inputText: parsed.data.inputText,
+      autoApprove: parsed.data.autoApprove,
+    })
     .returning();
 
   if (!run) return NextResponse.json({ error: 'insert failed' }, { status: 500 });
