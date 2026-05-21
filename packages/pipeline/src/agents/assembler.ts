@@ -10,6 +10,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import path from 'path';
 import { upsertStage, markStageRunning, markStageFailed } from '../db-ops.js';
 import { createLogger } from '../logger.js';
+import { assembleVideoWithFfmpeg } from '../skills/ffmpeg-renderer.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Next.js sets cwd to apps/web/; resolve from there, not monorepo root
@@ -53,8 +54,11 @@ export async function runAssembler(
       JSON.stringify(renderManifest, null, 2),
     );
 
+    // attempt real ffmpeg render — gracefully skips if ffmpeg not installed
+    const mp4Url = await assembleVideoWithFfmpeg(runId, storyboard, assets);
+
     const result = renderResultSchema.parse({
-      output_url: `/assets/runs/${runId}/output.mp4`,
+      output_url: mp4Url ?? `/assets/runs/${runId}/output.mp4`,
       duration_seconds: totalSeconds,
       width: 1920,
       height: 1080,
@@ -62,9 +66,13 @@ export async function runAssembler(
 
     // No approval gate — auto-approve so QA can follow
     await upsertStage(runId, 'render', 'approved', result);
-    logger.info('render manifest saved — invoke remotion render to produce MP4', {
-      manifest: `apps/web/public/assets/runs/${runId}/render-manifest.json`,
-    });
+    if (mp4Url) {
+      logger.info('output.mp4 rendered via ffmpeg', { mp4Url });
+    } else {
+      logger.info('render manifest saved — install ffmpeg for MP4 output', {
+        manifest: `apps/web/public/assets/runs/${runId}/render-manifest.json`,
+      });
+    }
     return result;
   } catch (err) {
     await markStageFailed(runId, 'render', String(err));

@@ -6,12 +6,12 @@ const audienceSchema = z.object({
 });
 
 const toneSchema = z.object({
-  voice: z.enum(['casual', 'authoritative', 'playful', 'explainer']),
+  voice: z.enum(['casual', 'authoritative', 'playful', 'explainer', 'professional']),
   notes: z.string().optional(),
 });
 
 const researchSchema = z.object({
-  min_sources: z.number().int().min(1),
+  min_sources: z.number().int().min(0),
   recency_window_days: z.number().int().min(1),
   require_primary_sources: z.boolean(),
   source_balance: z.array(z.string()).optional(),
@@ -29,7 +29,7 @@ const visualStyleSchema = z.object({
   template: z.enum(['kinetic-explainer']),
   palette: z.array(z.string()),
   font: z.string(),
-  motion_intensity: z.enum(['subtle', 'balanced', 'snappy']),
+  motion_intensity: z.enum(['subtle', 'balanced', 'snappy', 'smooth']),
   broll_policy: z.enum(['stock_preferred', 'mixed', 'generated_allowed']),
 });
 

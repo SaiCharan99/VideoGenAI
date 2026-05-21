@@ -42,8 +42,23 @@ export async function runAssetGenerator(
     const generatedScenes = validatedStoryboard.scenes.filter(
       (s) => s.visual_kind === 'generated_still',
     );
+    const screenshotScenes = validatedStoryboard.scenes.filter(
+      (s) => s.visual_kind === 'screenshot',
+    );
 
     const results = await Promise.allSettled([
+      // ── Screenshot scenes — register the local path as-is ─────────────────
+      ...screenshotScenes.map((scene) => {
+        const localPath = scene.screenshot_path ?? null;
+        assets.push({
+          kind: 'screenshot',
+          scene: scene.scene,
+          url: localPath ? `/assets/${localPath}` : `/assets/sitespace/placeholder.png`,
+          local_path: localPath ?? undefined,
+        });
+        logger.info('screenshot asset registered', { scene: scene.scene, localPath });
+        return Promise.resolve();
+      }),
       ...stockScenes.map(async (scene) => {
         try {
           const result = await fetchPexelsVideo(scene.visual_description);

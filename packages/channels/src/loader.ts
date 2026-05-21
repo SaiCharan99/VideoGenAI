@@ -102,6 +102,48 @@ const REGISTRY: Record<string, unknown> = {
         '{summary}\n\nSources:\n{source_list}\n\nAI-generated narration and animation. Editorially reviewed.',
     },
   },
+
+  'pitch-video': {
+    channel_id: 'pitch-video',
+    display_name: 'Pitch Video',
+    audience: {
+      description: 'Construction industry decision-makers and investors evaluating SiteSpace',
+      assumed_knowledge_level: 'medium',
+    },
+    tone: {
+      voice: 'professional',
+      notes:
+        'Confident, clear, solution-focused. Australian audience. No fluff — every sentence earns its place.',
+    },
+    length_target_seconds: [120, 200],
+    research: {
+      min_sources: 0,
+      recency_window_days: 365,
+      require_primary_sources: false,
+      source_balance: [],
+      blocked_sources: [],
+    },
+    bias_rules: [
+      'This is a promotional video — present the product capabilities accurately.',
+      'Do not make unverifiable claims about market share or competitor comparisons.',
+    ],
+    jargon: {
+      explain_threshold: 'construction-specific acronyms only',
+      include_history: false,
+    },
+    visual_style: {
+      template: 'kinetic-explainer',
+      palette: ['#0D1F2D', '#00C5B5', '#FFFFFF'],
+      font: 'Inter',
+      motion_intensity: 'smooth',
+      broll_policy: 'generated_allowed',
+    },
+    publish: {
+      auto_upload: false,
+      shorts_variant: false,
+      description_template: '{summary}\n\nBook a 15-minute demo at sitespace.com.au',
+    },
+  },
 };
 
 export function loadChannel(channelId: string): ChannelConfig {

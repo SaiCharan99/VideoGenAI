@@ -20,7 +20,17 @@ export interface RunResumedEvent {
   data: { runId: string };
 }
 
-type VideoGenAIEvents = PipelineStartEvent | StageResponseEvent | RunResumedEvent;
+export interface RunInjectEvent {
+  name: 'videogenai/run.inject';
+  data: {
+    runId: string;
+    channelId: string;
+    script: unknown;
+    storyboard: unknown;
+  };
+}
+
+type VideoGenAIEvents = PipelineStartEvent | StageResponseEvent | RunResumedEvent | RunInjectEvent;
 
 export const inngest = new Inngest({
   id: 'videogenai',

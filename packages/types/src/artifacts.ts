@@ -87,8 +87,10 @@ export const storyboardSceneSchema = z.object({
     'generated_still',
     'generated_clip',
     'map',
+    'screenshot',
   ]),
   visual_description: z.string(),
+  screenshot_path: z.string().optional(),
   text_overlay: z.string().optional(),
   audio_note: z.string().optional(),
 });
@@ -122,10 +124,18 @@ export const generatedStillAssetSchema = z.object({
   prompt: z.string(),
 });
 
+export const screenshotAssetSchema = z.object({
+  kind: z.literal('screenshot'),
+  scene: z.number().int(),
+  url: z.string(),
+  local_path: z.string().optional(),
+});
+
 export const assetSchema = z.discriminatedUnion('kind', [
   ttsAssetSchema,
   stockBrollAssetSchema,
   generatedStillAssetSchema,
+  screenshotAssetSchema,
 ]);
 export type Asset = z.infer<typeof assetSchema>;
 
