@@ -1,4 +1,5 @@
 import { EventSchemas, Inngest } from 'inngest';
+import type { Script, Storyboard } from '@videogenai/types';
 
 export interface PipelineStartEvent {
   name: 'videogenai/run.start';
@@ -25,8 +26,8 @@ export interface RunInjectEvent {
   data: {
     runId: string;
     channelId: string;
-    script: unknown;
-    storyboard: unknown;
+    script: Script;
+    storyboard: Storyboard;
   };
 }
 

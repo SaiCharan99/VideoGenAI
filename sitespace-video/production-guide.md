@@ -147,7 +147,7 @@ Prompt: "A professional subcontractor profile card UI with name, photo, and cred
 
 Open pexels.com/videos and search each query. Download the HD version.
 
-```
+```text
 construction site worker phone frustrated
 site manager hard hat hard hat rubbing temples
 tower crane construction site

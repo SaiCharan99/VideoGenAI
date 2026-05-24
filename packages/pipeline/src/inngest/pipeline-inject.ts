@@ -9,7 +9,13 @@
  */
 import { loadChannel } from '@videogenai/channels';
 import { db, runs } from '@videogenai/db';
-import { type QaReport, type StageId, scriptSchema, storyboardSchema } from '@videogenai/types';
+import {
+  type QaReport,
+  type StageId,
+  scriptSchema,
+  storyboardSchema,
+  qaReportSchema,
+} from '@videogenai/types';
 import { eq } from 'drizzle-orm';
 import { runAssetGenerator } from '../agents/asset-generator.js';
 import { runAssembler } from '../agents/assembler.js';
@@ -135,7 +141,7 @@ export const pipelineInject = inngest.createFunction(
 
         const rd = response.data;
         if (rd.action === 'approved') {
-          effectiveQaReport = (rd.editedOutput ?? result) as QaReport;
+          effectiveQaReport = qaReportSchema.parse(rd.editedOutput ?? result);
           break;
         }
         feedback = rd.feedback;

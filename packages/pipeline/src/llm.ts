@@ -99,16 +99,33 @@ async function generateWithOpenAi<T>(
 
   const MAX_ATTEMPTS = 4;
   const BASE_DELAY_MS = 2000;
+  const REQUEST_TIMEOUT_MS = 120_000;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const res = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+      res = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timer);
+      if (attempt === MAX_ATTEMPTS) {
+        throw new Error(`OpenAI/Codex request failed (network/timeout): ${String(fetchErr)}`);
+      }
+      const delayMs = BASE_DELAY_MS * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      continue;
+    }
+    clearTimeout(timer);
 
     if (res.ok) {
       const response = (await res.json()) as OpenAiResponse;

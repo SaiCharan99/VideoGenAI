@@ -188,7 +188,6 @@ export default function NewRunPage() {
                   background: autoApprove ? 'var(--ac-ok)' : 'var(--bg-3)',
                   position: 'relative',
                   transition: 'background 0.18s',
-                  outline: 'none',
                 }}
                 aria-label={autoApprove ? 'Disable auto-approve' : 'Enable auto-approve'}
               >

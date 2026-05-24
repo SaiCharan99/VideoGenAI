@@ -172,15 +172,27 @@ export async function assembleVideoWithFfmpeg(
             logger.warn(`scene ${scene.scene}: screenshot not found at ${absPath}, using black`);
             await makeBlackClip(ffmpeg, scene.duration_seconds, clipPath);
           }
-        } else if (asset?.kind === 'stock_broll' || asset?.kind === 'generated_still') {
-          const videoUrl = asset.url;
+        } else if (asset?.kind === 'stock_broll') {
           const tmpVideo = path.join(tmpDir, `dl-${scene.scene}.mp4`);
           try {
-            await fetchToFile(videoUrl, tmpVideo, 120_000);
+            await fetchToFile(asset.url, tmpVideo, 120_000);
             await makeVideoClip(ffmpeg, tmpVideo, scene.duration_seconds, clipPath);
             logger.info(`scene ${scene.scene}: stock clip done`);
           } catch (dlErr) {
             logger.warn(`scene ${scene.scene}: download/trim failed — using black`, {
+              reason: String(dlErr),
+            });
+            await makeBlackClip(ffmpeg, scene.duration_seconds, clipPath);
+          }
+        } else if (asset?.kind === 'generated_still') {
+          const ext = asset.url.split('.').pop()?.toLowerCase() ?? 'jpg';
+          const tmpImage = path.join(tmpDir, `dl-${scene.scene}.${ext}`);
+          try {
+            await fetchToFile(asset.url, tmpImage, 120_000);
+            await makeImageClip(ffmpeg, tmpImage, scene.duration_seconds, clipPath);
+            logger.info(`scene ${scene.scene}: generated still clip done`);
+          } catch (dlErr) {
+            logger.warn(`scene ${scene.scene}: generated still failed — using black`, {
               reason: String(dlErr),
             });
             await makeBlackClip(ffmpeg, scene.duration_seconds, clipPath);
