@@ -109,6 +109,43 @@ export async function runAssetGenerator(
       }
     }
 
+    // ── Fallback: fetch Pexels for scenes with no dedicated asset handler ─────
+    // kinetic_text, text_card, generated_clip, map, chart — use visual_description as search query
+    const coveredScenes = new Set(assets.map((a) => a.scene));
+    const fallbackScenes = validatedStoryboard.scenes.filter((s) => !coveredScenes.has(s.scene));
+    if (fallbackScenes.length > 0) {
+      logger.info('fetching Pexels fallback for uncovered scenes', {
+        count: fallbackScenes.length,
+      });
+    }
+    for (const scene of fallbackScenes) {
+      try {
+        // Trim description to a short search query (first ~60 chars, up to a word boundary)
+        const rawDesc = scene.visual_description.slice(0, 60);
+        const query =
+          rawDesc.lastIndexOf(' ') > 20 ? rawDesc.slice(0, rawDesc.lastIndexOf(' ')) : rawDesc;
+        const result = await fetchPexelsVideo(query);
+        if (result) {
+          assets.push({
+            kind: 'stock_broll',
+            scene: scene.scene,
+            url: result.url,
+            provider: 'pexels',
+            attribution: result.attribution,
+          });
+          logger.info('fallback stock asset fetched', {
+            scene: scene.scene,
+            kind: scene.visual_kind,
+          });
+        } else {
+          logger.warn('no Pexels fallback result', { scene: scene.scene, kind: scene.visual_kind });
+        }
+      } catch (err) {
+        logger.warn('fallback fetch threw', { scene: scene.scene, reason: String(err) });
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+
     assets.sort((a, b) => a.scene - b.scene);
     const manifest = assetManifestSchema.parse({ narration_url, assets });
 
