@@ -24,6 +24,7 @@ export default function NewRunPage() {
   const router = useRouter();
   const [channelId, setChannelId] = useState(CHANNELS[0]!.id);
   const [topic, setTopic] = useState('');
+  const [autoApprove, setAutoApprove] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,7 +39,7 @@ export default function NewRunPage() {
       const res = await fetch('/api/runs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelId, inputText: topic }),
+        body: JSON.stringify({ channelId, inputText: topic, autoApprove }),
       });
       if (!res.ok) {
         const body = (await res.json()) as { error?: unknown };
@@ -161,6 +162,50 @@ export default function NewRunPage() {
             </div>
           </div>
 
+          {/* Auto-approve toggle */}
+          <div className="fld">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+              <div>
+                <div className="fld__label" style={{ marginBottom: 2 }}>
+                  <span>Auto-approve</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--tx-3)', lineHeight: 1.45 }}>
+                  {autoApprove
+                    ? 'Pipeline will run all 10 stages without stopping.'
+                    : 'Pipeline pauses at each stage for human review.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAutoApprove((v) => !v)}
+                style={{
+                  flexShrink: 0,
+                  width: 40,
+                  height: 22,
+                  borderRadius: 11,
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: autoApprove ? 'var(--ac-ok)' : 'var(--bg-3)',
+                  position: 'relative',
+                  transition: 'background 0.18s',
+                }}
+                aria-label={autoApprove ? 'Disable auto-approve' : 'Enable auto-approve'}
+              >
+                <span style={{
+                  position: 'absolute',
+                  top: 3,
+                  left: autoApprove ? 21 : 3,
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  transition: 'left 0.18s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+                }} />
+              </button>
+            </div>
+          </div>
+
           {/* Error */}
           {error && (
             <div style={{
@@ -198,10 +243,11 @@ export default function NewRunPage() {
             <h4>What happens next <span>10 stages</span></h4>
             <div className="pipe-preview">
               {ALL_STAGES.map((s, i) => (
-                <div key={s.id} className={cls('pipe-preview__step', GATE_IDS.has(s.id) && 'gate')}>
+                <div key={s.id} className={cls('pipe-preview__step', !autoApprove && GATE_IDS.has(s.id) && 'gate')}>
                   <div className="pipe-preview__dot">{String(i + 1).padStart(2, '0')}</div>
                   <span className="pipe-preview__name">{s.label}</span>
-                  {GATE_IDS.has(s.id) && <span className="pipe-preview__gate">approval</span>}
+                  {!autoApprove && GATE_IDS.has(s.id) && <span className="pipe-preview__gate">approval</span>}
+                  {autoApprove && GATE_IDS.has(s.id) && <span className="pipe-preview__gate" style={{ background: 'var(--ac-ok-bg)', color: 'var(--ac-ok)', borderColor: 'var(--ac-ok-br)' }}>auto</span>}
                 </div>
               ))}
             </div>

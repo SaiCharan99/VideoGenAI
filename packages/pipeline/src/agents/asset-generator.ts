@@ -42,27 +42,47 @@ export async function runAssetGenerator(
     const generatedScenes = validatedStoryboard.scenes.filter(
       (s) => s.visual_kind === 'generated_still',
     );
+    const screenshotScenes = validatedStoryboard.scenes.filter(
+      (s) => s.visual_kind === 'screenshot',
+    );
 
-    const results = await Promise.allSettled([
-      ...stockScenes.map(async (scene) => {
-        try {
-          const result = await fetchPexelsVideo(scene.visual_description);
-          if (result) {
-            assets.push({
-              kind: 'stock_broll',
-              scene: scene.scene,
-              url: result.url,
-              provider: 'pexels',
-              attribution: result.attribution,
-            });
-            logger.info('stock asset fetched', { scene: scene.scene });
-          } else {
-            logger.warn('no Pexels result for scene', { scene: scene.scene });
-          }
-        } catch (err) {
-          logger.warn('stock asset fetch threw', { scene: scene.scene, reason: String(err) });
+    // ── Screenshot scenes — register synchronously ────────────────────────────
+    for (const scene of screenshotScenes) {
+      const localPath = scene.screenshot_path ?? null;
+      assets.push({
+        kind: 'screenshot',
+        scene: scene.scene,
+        url: localPath ? `/assets/${localPath}` : `/assets/sitespace/placeholder.png`,
+        local_path: localPath ?? undefined,
+      });
+      logger.info('screenshot asset registered', { scene: scene.scene, localPath });
+    }
+
+    // ── Pexels stock scenes — sequential to avoid burst rate-limits ──────────
+    for (const scene of stockScenes) {
+      try {
+        const result = await fetchPexelsVideo(scene.visual_description);
+        if (result) {
+          assets.push({
+            kind: 'stock_broll',
+            scene: scene.scene,
+            url: result.url,
+            provider: 'pexels',
+            attribution: result.attribution,
+          });
+          logger.info('stock asset fetched', { scene: scene.scene });
+        } else {
+          logger.warn('no Pexels result for scene', { scene: scene.scene });
         }
-      }),
+      } catch (err) {
+        logger.warn('stock asset fetch threw', { scene: scene.scene, reason: String(err) });
+      }
+      // 1s gap between Pexels requests — avoids per-second burst limits
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+
+    // ── AI-generated stills — parallel (Replicate handles concurrency) ────────
+    const results = await Promise.allSettled([
       ...generatedScenes.map(async (scene) => {
         try {
           const url = await generateFluxImage(scene.visual_description);
@@ -87,6 +107,43 @@ export async function runAssetGenerator(
       if (r.status === 'rejected') {
         logger.warn('unexpected allSettled rejection', { reason: String(r.reason) });
       }
+    }
+
+    // ── Fallback: fetch Pexels for scenes with no dedicated asset handler ─────
+    // kinetic_text, text_card, generated_clip, map, chart — use visual_description as search query
+    const coveredScenes = new Set(assets.map((a) => a.scene));
+    const fallbackScenes = validatedStoryboard.scenes.filter((s) => !coveredScenes.has(s.scene));
+    if (fallbackScenes.length > 0) {
+      logger.info('fetching Pexels fallback for uncovered scenes', {
+        count: fallbackScenes.length,
+      });
+    }
+    for (const scene of fallbackScenes) {
+      try {
+        // Trim description to a short search query (first ~60 chars, up to a word boundary)
+        const rawDesc = scene.visual_description.slice(0, 60);
+        const query =
+          rawDesc.lastIndexOf(' ') > 20 ? rawDesc.slice(0, rawDesc.lastIndexOf(' ')) : rawDesc;
+        const result = await fetchPexelsVideo(query);
+        if (result) {
+          assets.push({
+            kind: 'stock_broll',
+            scene: scene.scene,
+            url: result.url,
+            provider: 'pexels',
+            attribution: result.attribution,
+          });
+          logger.info('fallback stock asset fetched', {
+            scene: scene.scene,
+            kind: scene.visual_kind,
+          });
+        } else {
+          logger.warn('no Pexels fallback result', { scene: scene.scene, kind: scene.visual_kind });
+        }
+      } catch (err) {
+        logger.warn('fallback fetch threw', { scene: scene.scene, reason: String(err) });
+      }
+      await new Promise((r) => setTimeout(r, 1000));
     }
 
     assets.sort((a, b) => a.scene - b.scene);

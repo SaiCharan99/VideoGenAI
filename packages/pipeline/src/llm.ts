@@ -97,22 +97,54 @@ async function generateWithOpenAi<T>(
     body.reasoning = { effort: reasoningEffort };
   }
 
-  const res = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  const MAX_ATTEMPTS = 4;
+  const BASE_DELAY_MS = 2000;
+  const REQUEST_TIMEOUT_MS = 120_000;
 
-  if (!res.ok) {
-    throw new Error(`OpenAI/Codex request failed: ${res.status} ${await res.text()}`);
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+      res = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timer);
+      if (attempt === MAX_ATTEMPTS) {
+        throw new Error(`OpenAI/Codex request failed (network/timeout): ${String(fetchErr)}`);
+      }
+      const delayMs = BASE_DELAY_MS * 2 ** (attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      continue;
+    }
+    clearTimeout(timer);
+
+    if (res.ok) {
+      const response = (await res.json()) as OpenAiResponse;
+      const text = extractOpenAiOutputText(response);
+      return parseJson(text, 'OpenAI/Codex');
+    }
+
+    const isTransient = res.status >= 500 || res.status === 429;
+    const responseText = await res.text();
+
+    if (!isTransient || attempt === MAX_ATTEMPTS) {
+      throw new Error(`OpenAI/Codex request failed: ${res.status} ${responseText}`);
+    }
+
+    const delayMs = BASE_DELAY_MS * 2 ** (attempt - 1);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
-  const response = (await res.json()) as OpenAiResponse;
-  const text = extractOpenAiOutputText(response);
-  return parseJson(text, 'OpenAI/Codex');
+  throw new Error('OpenAI/Codex: unreachable');
 }
 
 async function generateWithAnthropic<T>(options: GenerateStructuredOptions<T>): Promise<unknown> {

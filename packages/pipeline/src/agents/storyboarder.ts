@@ -78,13 +78,15 @@ Visual kind options:
 - map: geographic map with highlights — use for location-based context
 
 Rules:
-- Prefer kinetic_text for explanatory content.
+- Prefer stock_broll for all explanatory, conceptual, and real-world scenes — it produces real footage the renderer can use.
+- Use kinetic_text ONLY for short title cards, key term definitions, or single-word emphasis. Maximum 20% of total scenes.
 - Prefer stock_broll for real-world events (parliament sessions, protests, product launches).
 - Use chart for any scene presenting statistics or comparisons.
+- Use generated_still when a very specific visual is needed that stock won't cover.
 - Obey the b-roll policy: "${channel.visual_style.broll_policy}".
 - Never use a talking-head avatar or AI face.
 - Durations must sum to the script's estimated duration ± 10%.
-- Jargon definitions should appear as text_card or kinetic_text overlays at first use.`;
+- Jargon definitions should use stock_broll with a text_overlay field rather than kinetic_text.`;
 }
 
 function buildUserPrompt(

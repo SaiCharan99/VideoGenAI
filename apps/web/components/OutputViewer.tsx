@@ -923,6 +923,313 @@ function OVAssets({ data }: { data: AssetsData }) {
   );
 }
 
+// ── QA viewer ────────────────────────────────────────────────────────────────
+
+interface QaIssue {
+  severity?: string;
+  category?: string;
+  description?: string;
+  suggested_fix?: string;
+}
+interface QaData {
+  verdict?: string;
+  quality_score?: number;
+  content_score?: number;
+  asset_score?: number;
+  issues?: QaIssue[];
+  summary?: string;
+  publish_title?: string;
+  publish_description?: string;
+  tags?: string[];
+}
+function isQa(v: unknown): v is QaData {
+  return typeof v === 'object' && v !== null && 'verdict' in v && 'publish_title' in v;
+}
+
+function OVQa({ data }: { data: QaData }) {
+  const issues = data.issues ?? [];
+  const criticals = issues.filter((i) => i.severity === 'critical');
+  const warnings = issues.filter((i) => i.severity === 'warning');
+  const infos = issues.filter((i) => i.severity === 'info');
+
+  const verdictColor =
+    data.verdict === 'approved'
+      ? 'var(--ac-ok)'
+      : data.verdict === 'approved_with_notes'
+        ? 'var(--ac-approve)'
+        : 'var(--ac-bad)';
+
+  function scoreBar(score: number | undefined, label: string) {
+    const pct = Math.round((score ?? 0) * 100);
+    const color = pct >= 80 ? 'var(--ac-ok)' : pct >= 60 ? 'var(--ac-approve)' : 'var(--ac-bad)';
+    return (
+      <div>
+        <span className="k">{label}</span>
+        <span className="v">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div
+              style={{
+                width: 80,
+                height: 4,
+                borderRadius: 2,
+                background: 'var(--bg-4)',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ width: `${pct}%`, height: '100%', background: color }} />
+            </div>
+            <span style={{ fontFamily: 'var(--f-mono)', fontSize: 11, color }}>{pct}%</span>
+          </div>
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ov">
+      <div>
+        <div className="ov__h">
+          Verdict <span className="line" />
+        </div>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 14px',
+            borderRadius: 'var(--r-2)',
+            border: `1px solid ${verdictColor}`,
+            background: `color-mix(in srgb, ${verdictColor} 10%, transparent)`,
+            color: verdictColor,
+            fontFamily: 'var(--f-mono)',
+            fontSize: 13,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: 16,
+          }}
+        >
+          {data.verdict?.replace('_', ' ') ?? '—'}
+        </div>
+        {data.summary && (
+          <div style={{ fontSize: 13, color: 'var(--tx-2)', lineHeight: 1.6 }}>{data.summary}</div>
+        )}
+      </div>
+
+      <div className="ov__kv">
+        {scoreBar(data.quality_score, 'Overall')}
+        {scoreBar(data.content_score, 'Content')}
+        {scoreBar(data.asset_score, 'Assets')}
+        <div>
+          <span className="k">Issues</span>
+          <span className="v">
+            {criticals.length > 0 && (
+              <span style={{ color: 'var(--ac-bad)', marginRight: 8 }}>
+                {criticals.length} critical
+              </span>
+            )}
+            {warnings.length > 0 && (
+              <span style={{ color: 'var(--ac-approve)', marginRight: 8 }}>
+                {warnings.length} warning
+              </span>
+            )}
+            {infos.length > 0 && <span style={{ color: 'var(--tx-3)' }}>{infos.length} info</span>}
+            {issues.length === 0 && <span style={{ color: 'var(--ac-ok)' }}>none</span>}
+          </span>
+        </div>
+      </div>
+
+      {issues.length > 0 && (
+        <div>
+          <div className="ov__h">
+            Issues · {issues.length} <span className="line" />
+          </div>
+          <div>
+            {[...criticals, ...warnings, ...infos].map((issue, i) => {
+              const sev = issue.severity ?? 'info';
+              const color =
+                sev === 'critical'
+                  ? 'var(--ac-bad)'
+                  : sev === 'warning'
+                    ? 'var(--ac-approve)'
+                    : 'var(--tx-3)';
+              return (
+                <div
+                  key={i}
+                  style={{
+                    padding: '10px 14px',
+                    marginBottom: 6,
+                    borderRadius: 'var(--r-2)',
+                    border: `1px solid ${color}`,
+                    background: `color-mix(in srgb, ${color} 8%, transparent)`,
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--f-mono)',
+                        fontSize: 10,
+                        color,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                      }}
+                    >
+                      {sev}
+                    </span>
+                    {issue.category && (
+                      <span
+                        style={{ fontFamily: 'var(--f-mono)', fontSize: 10, color: 'var(--tx-3)' }}
+                      >
+                        {issue.category}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--tx-1)' }}>{issue.description}</div>
+                  {issue.suggested_fix && (
+                    <div style={{ fontSize: 12, color: 'var(--tx-3)', marginTop: 4 }}>
+                      Fix: {issue.suggested_fix}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {data.publish_title && (
+        <div>
+          <div className="ov__h">
+            YouTube metadata <span className="line" />
+          </div>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: 'var(--tx-1)',
+              lineHeight: 1.4,
+              marginBottom: 10,
+            }}
+          >
+            {data.publish_title}
+          </div>
+          {data.publish_description && (
+            <pre
+              style={{
+                fontSize: 12,
+                color: 'var(--tx-2)',
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                background: 'var(--bg-inset)',
+                padding: '10px 12px',
+                borderRadius: 'var(--r-2)',
+                border: '1px solid var(--br-1)',
+                marginBottom: 10,
+                fontFamily: 'var(--f-sans)',
+              }}
+            >
+              {data.publish_description}
+            </pre>
+          )}
+          {(data.tags ?? []).length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {(data.tags ?? []).map((tag, i) => (
+                <span
+                  key={i}
+                  style={{
+                    fontFamily: 'var(--f-mono)',
+                    fontSize: 11,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: 'var(--bg-3)',
+                    border: '1px solid var(--br-2)',
+                    color: 'var(--tx-2)',
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Publish viewer ────────────────────────────────────────────────────────────
+
+interface PublishData {
+  youtube_video_id?: string;
+  youtube_url?: string;
+  title?: string;
+  description?: string;
+  published_at?: string;
+}
+function isPublish(v: unknown): v is PublishData {
+  return typeof v === 'object' && v !== null && 'youtube_video_id' in v;
+}
+
+function OVPublish({ data }: { data: PublishData }) {
+  return (
+    <div className="ov">
+      <div className="ov__h">
+        Published to YouTube <span className="line" />
+      </div>
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 14px',
+          borderRadius: 'var(--r-2)',
+          border: '1px solid var(--ac-ok)',
+          background: 'color-mix(in srgb, var(--ac-ok) 10%, transparent)',
+          color: 'var(--ac-ok)',
+          fontFamily: 'var(--f-mono)',
+          fontSize: 13,
+          fontWeight: 600,
+          marginBottom: 16,
+        }}
+      >
+        <IcCheck size={14} /> Live on YouTube
+      </div>
+      <div className="ov__kv">
+        <div>
+          <span className="k">Video ID</span>
+          <span className="v" style={{ fontFamily: 'var(--f-mono)' }}>
+            {data.youtube_video_id ?? '—'}
+          </span>
+        </div>
+        {data.published_at && (
+          <div>
+            <span className="k">Published</span>
+            <span className="v">{new Date(data.published_at).toLocaleString()}</span>
+          </div>
+        )}
+        {data.title && (
+          <div>
+            <span className="k">Title</span>
+            <span className="v">{data.title}</span>
+          </div>
+        )}
+      </div>
+      {data.youtube_url && (
+        <a
+          href={data.youtube_url}
+          target="_blank"
+          rel="noreferrer"
+          className="btn btn--approve btn--sm"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8 }}
+        >
+          <IcExt size={12} /> Open on YouTube
+        </a>
+      )}
+    </div>
+  );
+}
+
 // ── Render viewer ─────────────────────────────────────────────────────────────
 
 interface RenderData {
@@ -1011,6 +1318,8 @@ export function OutputViewer({ output, stageId }: Props) {
     'storyboard',
     'assets',
     'render',
+    'qa',
+    'publish',
   ]);
   const hasFormatted = FORMATTED_STAGES.has(stageId);
 
@@ -1051,6 +1360,10 @@ export function OutputViewer({ output, stageId }: Props) {
         <OVAssets data={output} />
       ) : stageId === 'render' && isRender(output) ? (
         <OVRender data={output} />
+      ) : stageId === 'qa' && isQa(output) ? (
+        <OVQa data={output} />
+      ) : stageId === 'publish' && isPublish(output) ? (
+        <OVPublish data={output} />
       ) : (
         <JsonView data={output} />
       )}

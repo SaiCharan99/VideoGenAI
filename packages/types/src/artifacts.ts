@@ -87,8 +87,10 @@ export const storyboardSceneSchema = z.object({
     'generated_still',
     'generated_clip',
     'map',
+    'screenshot',
   ]),
   visual_description: z.string(),
+  screenshot_path: z.string().optional(),
   text_overlay: z.string().optional(),
   audio_note: z.string().optional(),
 });
@@ -122,10 +124,18 @@ export const generatedStillAssetSchema = z.object({
   prompt: z.string(),
 });
 
+export const screenshotAssetSchema = z.object({
+  kind: z.literal('screenshot'),
+  scene: z.number().int(),
+  url: z.string(),
+  local_path: z.string().optional(),
+});
+
 export const assetSchema = z.discriminatedUnion('kind', [
   ttsAssetSchema,
   stockBrollAssetSchema,
   generatedStillAssetSchema,
+  screenshotAssetSchema,
 ]);
 export type Asset = z.infer<typeof assetSchema>;
 
@@ -142,3 +152,36 @@ export const renderResultSchema = z.object({
   height: z.number().int().positive(),
 });
 export type RenderResult = z.infer<typeof renderResultSchema>;
+
+// ── Phase 6: QA report ──────────────────────────────────────────────────────
+
+export const qaIssueSchema = z.object({
+  severity: z.enum(['critical', 'warning', 'info']),
+  category: z.enum(['content', 'technical', 'compliance']),
+  description: z.string(),
+  suggested_fix: z.string().optional(),
+});
+
+export const qaReportSchema = z.object({
+  verdict: z.enum(['approved', 'approved_with_notes', 'rejected']),
+  quality_score: z.number().min(0).max(1),
+  content_score: z.number().min(0).max(1),
+  asset_score: z.number().min(0).max(1),
+  issues: z.array(qaIssueSchema),
+  summary: z.string(),
+  publish_title: z.string().max(100),
+  publish_description: z.string(),
+  tags: z.array(z.string()),
+});
+export type QaReport = z.infer<typeof qaReportSchema>;
+
+// ── Phase 6: Publish result ─────────────────────────────────────────────────
+
+export const publishResultSchema = z.object({
+  youtube_video_id: z.string(),
+  youtube_url: z.string().url(),
+  title: z.string(),
+  description: z.string(),
+  published_at: z.string(),
+});
+export type PublishResult = z.infer<typeof publishResultSchema>;

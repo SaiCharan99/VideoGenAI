@@ -1,0 +1,113 @@
+{
+  "channelId": "pitch-video",
+  "script": {
+    "title": "SiteSpace — Asset Booking, Site Access & AI Planning",
+    "description": "Pitch video for SiteSpace, an AI-powered construction site management platform covering asset booking, subcontractor verification, and AI capacity planning.",
+    "estimated_duration_seconds": 170,
+    "lines": [
+      {
+        "scene": 1,
+        "text": "On every construction site, tower cranes, loading bays, and hoists get booked through phone calls, emails, and WhatsApp threads. Subcontractors double book. Managers lose track. Work stalls.",
+        "source_ids": []
+      },
+      {
+        "scene": 2,
+        "text": "SiteSpace puts everyone on one platform. Managers add their assets, set the rules, and invite their subcontractors. Subcontractors see what is available, book what they need, on the exact day and time they need it. Managers approve in a single tap. Every booking, every request, every approval, all in one place. No more missed messages. No more double bookings.",
+        "source_ids": []
+      },
+      {
+        "scene": 3,
+        "text": "Every subcontractor has a verified site profile. Inductions, qualifications, insurance, all checked before they ever set foot on site. The right people, on the right asset, at the right time.",
+        "source_ids": []
+      },
+      {
+        "scene": 4,
+        "text": "Have you ever planned a week needing five tower cranes, only to find out the site has two? Clashes, blown budgets, shifted timelines. On paper, it all looked fine.",
+        "source_ids": []
+      },
+      {
+        "scene": 5,
+        "text": "Our in-house AI reads your project management plan and maps every asset you will need against what is actually available on site. It looks weeks ahead. It flags clashes before they happen. It shows you the exact moment you need to replan, reschedule, or procure more capacity. No more Monday morning surprises.",
+        "source_ids": []
+      },
+      {
+        "scene": 6,
+        "text": "Every site is different. Every project is different. SiteSpace adapts to yours. Configure your assets, your approval rules, your shift patterns, your compliance requirements. The platform shapes itself around the way your project actually runs.",
+        "source_ids": []
+      },
+      {
+        "scene": 7,
+        "text": "And it gets smarter every day. The more projects you run on SiteSpace, the better the AI understands your patterns, your bottlenecks, your peak demands. Predictions get sharper. Recommendations get more precise. Your second project starts smarter than your first. Your tenth runs almost on its own.",
+        "source_ids": []
+      },
+      {
+        "scene": 8,
+        "text": "SiteSpace. Asset booking, site access, AI planning. Built for the way construction actually runs in Australia and beyond. Book a fifteen minute demo at sitespace dot com dot au.",
+        "source_ids": []
+      }
+    ]
+  },
+  "storyboard": {
+    "scenes": [
+      {
+        "scene": 1,
+        "duration_seconds": 15,
+        "visual_kind": "stock_broll",
+        "visual_description": "construction site workers",
+        "text_overlay": "The hidden cost of asset chaos"
+      },
+      {
+        "scene": 2,
+        "duration_seconds": 30,
+        "visual_kind": "screenshot",
+        "visual_description": "SiteSpace dashboard home — asset booking calendar view",
+        "screenshot_path": "sitespace/home.png",
+        "text_overlay": "One platform. Zero chaos."
+      },
+      {
+        "scene": 3,
+        "duration_seconds": 15,
+        "visual_kind": "stock_broll",
+        "visual_description": "tablet scanning QR code",
+        "text_overlay": "Verified. Compliant. On site."
+      },
+      {
+        "scene": 4,
+        "duration_seconds": 15,
+        "visual_kind": "screenshot",
+        "visual_description": "SiteSpace capacity planning dashboard showing 123% crane overload",
+        "screenshot_path": "sitespace/capacity.png",
+        "text_overlay": "5 planned. 2 available."
+      },
+      {
+        "scene": 5,
+        "duration_seconds": 30,
+        "visual_kind": "screenshot",
+        "visual_description": "SiteSpace AI capacity planning — weeks-ahead demand vs capacity view",
+        "screenshot_path": "sitespace/capacity.png",
+        "text_overlay": "Weeks ahead. Not days behind."
+      },
+      {
+        "scene": 6,
+        "duration_seconds": 20,
+        "visual_kind": "stock_broll",
+        "visual_description": "engineer laptop office",
+        "text_overlay": "Configured for your site. Configured for your team."
+      },
+      {
+        "scene": 7,
+        "duration_seconds": 25,
+        "visual_kind": "stock_broll",
+        "visual_description": "construction workers team",
+        "text_overlay": "AI that learns your site."
+      },
+      {
+        "scene": 8,
+        "duration_seconds": 20,
+        "visual_kind": "stock_broll",
+        "visual_description": "construction crane aerial",
+        "text_overlay": "sitespace.com.au"
+      }
+    ]
+  }
+}

@@ -71,7 +71,7 @@ const pexelsResponseSchema = z.object({
     .array(
       z.object({
         video_files: z.array(
-          z.object({ link: z.string(), quality: z.string(), width: z.number() }),
+          z.object({ link: z.string(), quality: z.string().nullable(), width: z.number() }),
         ),
         user: z.object({ name: z.string() }),
       }),
@@ -84,7 +84,7 @@ export async function fetchPexelsVideo(query: string): Promise<PexelsResult | nu
   if (!apiKey) return null;
 
   const res = await fetchWithTimeout(
-    `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=3&orientation=landscape`,
+    `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=5&orientation=landscape`,
     { headers: { Authorization: apiKey } },
     15_000,
   );
@@ -97,7 +97,9 @@ export async function fetchPexelsVideo(query: string): Promise<PexelsResult | nu
   if (!video) return null;
 
   const file =
-    video.video_files.find((f) => f.quality === 'hd' && f.width >= 1280) ?? video.video_files[0];
+    video.video_files.find((f) => f.quality === 'hd' && f.width >= 1280) ??
+    video.video_files.find((f) => f.width >= 1280) ??
+    video.video_files[0];
   if (!file) return null;
 
   return { url: file.link, attribution: `Video by ${video.user.name} on Pexels` };
